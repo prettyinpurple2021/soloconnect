@@ -1,0 +1,191 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user profile on SoloConnect",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "location": { "type": "string" },
+        "links": { "type": "object" },
+        "portfolio": { "type": "array", "items": { "type": "object" } },
+        "connections": { "type": "array", "items": { "type": "string" } },
+        "blockedUsers": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "createdAt"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A social feed post",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "likes": { "type": "array", "items": { "type": "string" } },
+        "commentCount": { "type": "number" },
+        "groupId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "authorName", "content", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a post",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "parentId": { "type": "string" },
+        "replyCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "authorId", "authorName", "content", "createdAt"]
+    },
+    "Group": {
+      "title": "Group",
+      "description": "A community group",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "moderators": { "type": "array", "items": { "type": "string" } },
+        "coverImage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "description", "creatorId", "createdAt"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A community event",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "attendees": { "type": "array", "items": { "type": "string" } },
+        "groupId": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "date", "creatorId", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A user notification",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["connection_request", "comment", "event_invite"] },
+        "sourceUserId": { "type": "string" },
+        "sourceUserName": { "type": "string" },
+        "sourceUserPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "link": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "sourceUserId", "sourceUserName", "content", "link", "read", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "A direct message conversation",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "unreadCount": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message within a chat",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["chatId", "senderId", "content", "createdAt", "read"]
+    },
+    "PersonalEvent": {
+      "title": "PersonalEvent",
+      "description": "A personal event or reminder for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["event", "reminder", "task"] },
+        "recurrence": { "type": "string", "enum": ["none", "daily", "weekly", "monthly"] },
+        "completed": { "type": "boolean" },
+        "completedDates": { "type": "array", "items": { "type": "string" } },
+        "excludedDates": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "date", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "Social feed posts"
+    },
+    "comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Comments on posts"
+    },
+    "groups/{groupId}": {
+      "schema": { "$ref": "#/entities/Group" },
+      "description": "Community groups"
+    },
+    "events/{eventId}": {
+      "schema": { "$ref": "#/entities/Event" },
+      "description": "Community events"
+    },
+    "notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User notifications"
+    },
+    "chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Direct message conversations"
+    },
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages within a chat"
+    },
+    "personal_events/{eventId}": {
+      "schema": { "$ref": "#/entities/PersonalEvent" },
+      "description": "Personal user events and reminders"
+    }
+  }
+}
