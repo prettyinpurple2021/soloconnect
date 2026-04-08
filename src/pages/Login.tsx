@@ -21,8 +21,8 @@ export function Login() {
 
   if (loading || !isAuthReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FF00FF]">
-        <div className="w-16 h-16 border-8 border-black border-t-white rounded-full animate-spin shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"></div>
+      <div className="min-h-screen flex items-center justify-center bg-secondary">
+        <div className="w-16 h-16 border-8 border-on-surface border-t-surface-bg rounded-none animate-spin shadow-kinetic-sm"></div>
       </div>
     );
   }
@@ -38,23 +38,23 @@ export function Login() {
       await signInWithGoogle();
       navigate('/');
     } catch (err) {
-      setError('FAILED TO SPAWN. TRY AGAIN, TROLL!');
+      setError('FAILED TO SPAWN. TRY AGAIN, FOUNDER!');
     }
   };
 
   return (
-    <div className="min-h-screen flex bg-white font-mono">
+    <div className="min-h-screen flex bg-surface-bg font-sans">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex w-1/2 bg-[#00FF00] text-black p-12 flex-col justify-between relative overflow-hidden border-r-8 border-black">
+      <div className="hidden lg:flex w-1/2 bg-primary text-black p-12 flex-col justify-between relative overflow-hidden border-r-8 border-on-surface">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#FF00FF] rounded-full blur-3xl"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary rounded-full blur-3xl"></div>
         </div>
         
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-16">
-            <div className="w-14 h-14 bg-black rounded-none flex items-center justify-center rotate-3 shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
-              <span className="text-[#00FF00] font-black text-3xl leading-none">S</span>
+            <div className="w-14 h-14 bg-on-surface rounded-none flex items-center justify-center rotate-3 shadow-kinetic-thud">
+              <span className="text-primary font-black text-3xl leading-none">S</span>
             </div>
             <span className="text-4xl font-black tracking-tighter italic uppercase">SOLOCONNECT</span>
           </div>
@@ -66,7 +66,7 @@ export function Login() {
           >
             <h1 className="text-7xl font-black leading-[0.9] tracking-tighter mb-12 uppercase italic">
               THE ULTIMATE<br />
-              <span className="bg-black text-[#00FF00] px-4 py-2 inline-block -rotate-2 mt-4">ECOSYSTEM</span><br />
+              <span className="bg-on-surface text-primary px-4 py-2 inline-block -rotate-2 mt-4">ECOSYSTEM</span><br />
               FOR SOLO FOUNDERS.
             </h1>
             
@@ -77,14 +77,14 @@ export function Login() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 + (i * 0.1) }}
-                  className="flex items-center gap-4 p-5 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                  className="flex items-center gap-4 p-5 bg-surface-bg border-4 border-on-surface shadow-kinetic-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
                 >
-                  <div className={cn("p-3 border-2 border-black", app.bg, app.color)}>
+                  <div className={cn("p-3 border-2 border-on-surface", app.bg, app.color)}>
                     <app.icon className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="font-black text-black text-lg uppercase italic">{app.name}</p>
-                    <p className="text-sm font-bold text-black/60">{app.description}</p>
+                    <p className="font-black text-on-surface text-lg uppercase italic">{app.name}</p>
+                    <p className="text-sm font-bold text-on-surface/60">{app.description}</p>
                   </div>
                 </motion.div>
               ))}
@@ -92,14 +92,14 @@ export function Login() {
 
             <div className="flex flex-col gap-4 text-lg font-black uppercase italic">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-black flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-[#00FF00]" />
+                <div className="w-6 h-6 bg-on-surface flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
                 </div>
                 <span>100% FREE FOR SOLOISTS</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-black flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-[#00FF00]" />
+                <div className="w-6 h-6 bg-on-surface flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
                 </div>
                 <span>AI-POWERED PRODUCTIVITY</span>
               </div>
@@ -113,32 +113,32 @@ export function Login() {
       </div>
 
       {/* Right side - Login */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#FFFF00]">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-secondary">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex flex-col items-center gap-4 mb-12 justify-center">
-            <div className="w-16 h-16 bg-black rounded-none flex items-center justify-center rotate-6 shadow-[6px_6px_0px_0px_rgba(255,255,255,1)]">
-              <span className="text-[#00FF00] font-black text-4xl leading-none">S</span>
+            <div className="w-16 h-16 bg-on-surface rounded-none flex items-center justify-center rotate-6 shadow-kinetic-thud">
+              <span className="text-primary font-black text-4xl leading-none">S</span>
             </div>
             <span className="text-4xl font-black tracking-tighter italic uppercase">SOLOCONNECT</span>
           </div>
 
-          <div className="bg-white p-10 border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center gap-3 text-black mb-8">
-              <Sparkles className="w-8 h-8 text-[#FF00FF]" />
+          <div className="bg-surface-bg p-10 border-8 border-on-surface shadow-kinetic">
+            <div className="flex items-center gap-3 text-on-surface mb-8">
+              <Sparkles className="w-8 h-8 text-secondary" />
               <span className="text-xl font-black uppercase italic tracking-tighter">ENTER THE CAVE</span>
             </div>
-            <h2 className="text-5xl font-black text-black mb-4 uppercase italic leading-none tracking-tighter">WELCOME BACK, SOLOIST</h2>
-            <p className="text-black font-bold mb-10 text-lg">SIGN IN TO ACCESS YOUR ENTIRE SOLO EMPIRE.</p>
+            <h2 className="text-5xl font-black text-on-surface mb-4 uppercase italic leading-none tracking-tighter">WELCOME BACK, SOLOIST</h2>
+            <p className="text-on-surface font-bold mb-10 text-lg">SIGN IN TO ACCESS YOUR ENTIRE SOLO EMPIRE.</p>
 
             {error && (
-              <div className="bg-[#FF0000] text-white p-5 border-4 border-black font-black uppercase italic mb-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="bg-secondary text-black p-5 border-4 border-on-surface font-black uppercase italic mb-8 shadow-kinetic-thud">
                 {error}
               </div>
             )}
 
             <button
               onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-4 bg-[#00FFFF] border-4 border-black text-black px-6 py-5 font-black text-xl uppercase italic shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all active:scale-95"
+              className="w-full flex items-center justify-center gap-4 bg-accent border-4 border-on-surface text-black px-6 py-5 font-black text-xl uppercase italic shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all active:scale-95"
             >
               <svg className="w-8 h-8" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
@@ -149,7 +149,7 @@ export function Login() {
               CONTINUE WITH GOOGLE
             </button>
 
-            <div className="mt-12 text-center text-sm font-bold uppercase italic text-black/60">
+            <div className="mt-12 text-center text-sm font-bold uppercase italic text-on-surface/60">
               BY CONTINUING, YOU AGREE TO OUR CHAOTIC TERMS AND PRIVACY VOID.
             </div>
           </div>

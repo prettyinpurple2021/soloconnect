@@ -157,10 +157,10 @@ export function SuccessStories() {
                   onChange={e => setNewStory(prev => ({ ...prev, platform: e.target.value as any }))}
                   className="w-full bg-white border-4 border-black px-5 py-4 font-black uppercase italic text-lg focus:bg-[#00FFFF]/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:shadow-none appearance-none"
                 >
-                  <option value="SoloScribe">TROLLSCRIBE (IDEATION/DOCS)</option>
+                  <option value="SoloScribe">FOUNDER SCRIBE (IDEATION/DOCS)</option>
                   <option value="Content Factory">CONTENT FACTORY (SOCIAL)</option>
-                  <option value="SoloSuccess AI">TROLLSUCCESS AI (AGENTS)</option>
-                  <option value="Academy">TROLL ACADEMY (LEARNING)</option>
+                  <option value="SoloSuccess AI">FOUNDER SUCCESS AI (AGENTS)</option>
+                  <option value="Academy">FOUNDER ACADEMY (LEARNING)</option>
                 </select>
               </div>
               <div>
@@ -227,16 +227,22 @@ export function SuccessStories() {
             <p className="text-black font-bold text-lg leading-relaxed mb-8 italic">{story.content}</p>
 
             <div className="flex items-center gap-8 pt-6 border-t-4 border-black">
-              <button 
+              <motion.button 
+                whileTap={{ scale: 0.8 }}
                 onClick={() => handleLike(story.id, story.likes.includes(user?.uid || ''))}
                 className={cn(
-                  "flex items-center gap-3 transition-all hover:scale-110",
+                  "flex items-center gap-3 transition-all",
                   story.likes.includes(user?.uid || '') ? "text-[#FF0000]" : "text-black hover:text-[#FF0000]"
                 )}
               >
-                <Heart className={cn("w-7 h-7", story.likes.includes(user?.uid || '') && "fill-current")} />
+                <motion.div
+                  animate={story.likes.includes(user?.uid || '') ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Heart className={cn("w-7 h-7", story.likes.includes(user?.uid || '') && "fill-current")} />
+                </motion.div>
                 <span className="text-xl font-black italic">{story.likes.length}</span>
-              </button>
+              </motion.button>
               <button 
                 onClick={() => setActiveComments(activeComments === story.id ? null : story.id)}
                 className="flex items-center gap-3 text-black hover:text-[#00FFFF] transition-all hover:scale-110"

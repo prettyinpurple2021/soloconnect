@@ -253,17 +253,18 @@ export function SoloSuccessAI() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-10">
+    <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-10 font-sans">
       {/* Agent Sidebar */}
       <div className="lg:w-96 flex flex-col gap-6 overflow-hidden">
-        <div className="bg-neon-pink p-8 border-8 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] -rotate-1">
-          <h1 className="text-4xl font-black text-black uppercase italic tracking-tighter flex items-center gap-3">
+        <div className="bg-secondary p-8 border-8 border-on-surface shadow-kinetic -rotate-1 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/20 -rotate-45 translate-x-8 -translate-y-8"></div>
+          <h1 className="text-4xl font-black text-black uppercase italic tracking-tighter flex items-center gap-3 relative z-10">
             <Cpu className="w-8 h-8 text-black stroke-[3px]" /> SoloSuccess AI
           </h1>
-          <p className="text-sm font-bold text-black/70 mt-2 bg-white/50 px-3 py-1 border-2 border-black inline-block">Your team of 10 expert AI agents.</p>
+          <p className="text-sm font-bold text-black/70 mt-2 bg-white/50 px-3 py-1 border-2 border-black inline-block relative z-10">Your team of 10 expert AI agents.</p>
           <button 
             onClick={() => setShowInsights(true)}
-            className="w-full mt-6 flex items-center justify-center gap-3 bg-neon-yellow text-black py-3 border-4 border-black font-black uppercase italic text-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+            className="w-full mt-6 flex items-center justify-center gap-3 bg-accent text-black py-3 border-4 border-on-surface font-black uppercase italic text-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all shadow-kinetic-thud relative z-10"
           >
             <Bookmark className="w-5 h-5 stroke-[3px]" /> Saved Insights ({savedInsights.length})
           </button>
@@ -278,31 +279,31 @@ export function SoloSuccessAI() {
                 setMessages([]);
               }}
               className={cn(
-                "w-full flex items-center gap-5 p-5 border-8 border-black transition-all text-left group relative overflow-hidden",
+                "w-full flex items-center gap-5 p-5 border-8 border-on-surface transition-all text-left group relative overflow-hidden",
                 selectedAgent?.id === agent.id 
-                  ? "bg-neon-blue shadow-none translate-x-1 translate-y-1" 
-                  : "bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1",
+                  ? "bg-primary shadow-none translate-x-1 translate-y-1" 
+                  : "bg-surface-bg shadow-kinetic-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1",
                 index % 2 === 0 ? "rotate-1" : "-rotate-1"
               )}
             >
               <div className={cn(
-                "p-3 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-colors",
-                selectedAgent?.id === agent.id ? "bg-white text-black" : agent.color + " text-white"
+                "p-3 border-4 border-on-surface shadow-kinetic-thud transition-colors",
+                selectedAgent?.id === agent.id ? "bg-surface-bg text-on-surface" : agent.color + " text-white"
               )}>
                 <agent.icon className="w-6 h-6 stroke-[3px]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className={cn(
                   "text-xl font-black uppercase italic tracking-tight truncate",
-                  selectedAgent?.id === agent.id ? "text-black" : "text-black"
+                  selectedAgent?.id === agent.id ? "text-on-surface" : "text-on-surface"
                 )}>{agent.name}</p>
                 <p className={cn(
                   "text-xs font-bold uppercase tracking-widest truncate",
-                  selectedAgent?.id === agent.id ? "text-black/60" : "text-black/50"
+                  selectedAgent?.id === agent.id ? "text-on-surface/60" : "text-on-surface/50"
                 )}>{agent.role}</p>
               </div>
               <ChevronRight className={cn(
-                "w-6 h-6 transition-transform stroke-[4px]",
+                "w-6 h-6 transition-transform stroke-[4px] text-on-surface",
                 selectedAgent?.id === agent.id ? "translate-x-2" : "opacity-0 group-hover:opacity-100"
               )} />
             </button>
@@ -311,26 +312,26 @@ export function SoloSuccessAI() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 bg-white border-[10px] border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative">
+      <div className="flex-1 bg-surface-bg border-[10px] border-on-surface shadow-kinetic flex flex-col overflow-hidden relative">
         {selectedAgent ? (
           <>
             {/* Chat Header */}
-            <div className="p-8 border-b-8 border-black flex items-center justify-between bg-neon-green/10">
+            <div className="p-8 border-b-8 border-on-surface flex items-center justify-between bg-surface-container/50">
               <div className="flex items-center gap-6">
-                <div className={cn("p-4 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-white", selectedAgent.color)}>
+                <div className={cn("p-4 border-4 border-on-surface shadow-kinetic-thud text-white", selectedAgent.color)}>
                   <selectedAgent.icon className="w-8 h-8 stroke-[3px]" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-black uppercase italic tracking-tighter">{selectedAgent.name}</h2>
+                  <h2 className="text-3xl font-black text-on-surface uppercase italic tracking-tighter drop-shadow-[2px_2px_0px_#00ffff]">{selectedAgent.name}</h2>
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 bg-neon-green border-2 border-black rounded-full animate-pulse" />
-                    <p className="text-sm font-bold uppercase tracking-widest text-black/60">{selectedAgent.role} • Online</p>
+                    <span className="w-3 h-3 bg-accent border-2 border-on-surface rounded-none animate-pulse" />
+                    <p className="text-sm font-bold uppercase tracking-widest text-on-surface/60">{selectedAgent.role} • Online</p>
                   </div>
                 </div>
               </div>
               <button 
                 onClick={() => setMessages([])}
-                className="px-4 py-2 bg-white border-4 border-black font-black uppercase italic text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+                className="px-4 py-2 bg-surface-bg border-4 border-on-surface font-black uppercase italic text-xs shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-secondary"
               >
                 Clear Chat
               </button>
@@ -340,23 +341,23 @@ export function SoloSuccessAI() {
             <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px] [background-position:center]">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto">
-                  <div className={cn("p-8 border-8 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-white mb-10 rotate-3", selectedAgent.color)}>
+                  <div className={cn("p-8 border-8 border-on-surface shadow-kinetic text-white mb-10 rotate-3", selectedAgent.color)}>
                     <selectedAgent.icon className="w-16 h-16 stroke-[3px]" />
                   </div>
-                  <h3 className="text-4xl font-black text-black mb-4 uppercase italic tracking-tighter">Chat with {selectedAgent.name}</h3>
-                  <p className="text-xl font-bold text-black/70 leading-tight mb-10 bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                    {selectedAgent.description}
+                  <h3 className="text-4xl font-black text-on-surface mb-4 uppercase italic tracking-tighter drop-shadow-[4px_4px_0px_#ff00ff]">Chat with {selectedAgent.name}</h3>
+                  <p className="text-xl font-bold text-on-surface/70 leading-tight mb-10 bg-surface-bg border-4 border-on-surface p-6 shadow-kinetic-sm italic">
+                    "{selectedAgent.description}"
                   </p>
                   <div className="grid grid-cols-1 gap-4 w-full">
                     <button 
                       onClick={() => setInput("How can you help me grow my business?")}
-                      className="text-sm font-black uppercase italic p-5 bg-neon-yellow border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all text-left"
+                      className="text-sm font-black uppercase italic p-5 bg-accent border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all text-left"
                     >
                       "How can you help me grow my business?"
                     </button>
                     <button 
                       onClick={() => setInput("What's the first step I should take?")}
-                      className="text-sm font-black uppercase italic p-5 bg-neon-blue border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all text-left"
+                      className="text-sm font-black uppercase italic p-5 bg-primary border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all text-left"
                     >
                       "What's the first step I should take?"
                     </button>
@@ -369,17 +370,17 @@ export function SoloSuccessAI() {
                     m.role === 'user' ? "ml-auto flex-row-reverse" : ""
                   )}>
                     <div className={cn(
-                      "w-12 h-12 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center flex-shrink-0",
-                      m.role === 'user' ? "bg-neon-pink" : selectedAgent.color + " text-white"
+                      "w-12 h-12 border-4 border-on-surface shadow-kinetic-thud flex items-center justify-center flex-shrink-0",
+                      m.role === 'user' ? "bg-secondary" : selectedAgent.color + " text-white"
                     )}>
                       {m.role === 'user' ? <User className="w-6 h-6 stroke-[3px]" /> : <Bot className="w-6 h-6 stroke-[3px]" />}
                     </div>
                     <div className={cn(
-                      "p-6 border-8 border-black text-lg leading-tight relative group/msg shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]",
-                      m.role === 'user' ? "bg-black text-white -rotate-1" : "bg-white text-black rotate-1"
+                      "p-6 border-8 border-on-surface text-lg leading-tight relative group/msg shadow-kinetic-sm",
+                      m.role === 'user' ? "bg-on-surface text-surface-bg -rotate-1" : "bg-surface-bg text-on-surface rotate-1"
                     )}>
                       <div className={cn(
-                        "prose prose-lg max-w-none font-bold",
+                        "prose prose-lg max-w-none font-bold italic",
                         m.role === 'user' ? "prose-invert" : "prose-zinc"
                       )}>
                         <Markdown>{m.content}</Markdown>
@@ -387,7 +388,7 @@ export function SoloSuccessAI() {
                       {m.role === 'assistant' && (
                         <button 
                           onClick={() => handleSaveInsight(m.content)}
-                          className="absolute -right-16 top-0 p-3 bg-neon-yellow border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 opacity-0 group-hover/msg:opacity-100 transition-all"
+                          className="absolute -right-16 top-0 p-3 bg-accent border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 opacity-0 group-hover/msg:opacity-100 transition-all"
                           title="Save as insight"
                         >
                           {savedInsights.some(i => i.content === m.content) ? (
@@ -403,13 +404,13 @@ export function SoloSuccessAI() {
               )}
               {isGenerating && (
                 <div className="flex gap-6 max-w-[90%]">
-                  <div className={cn("w-12 h-12 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center flex-shrink-0", selectedAgent.color + " text-white")}>
+                  <div className={cn("w-12 h-12 border-4 border-on-surface shadow-kinetic-thud flex items-center justify-center flex-shrink-0", selectedAgent.color + " text-white")}>
                     <Bot className="w-6 h-6 stroke-[3px]" />
                   </div>
-                  <div className="bg-white border-8 border-black p-6 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] flex gap-2">
-                    <div className="w-3 h-3 bg-black rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-3 h-3 bg-black rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-3 h-3 bg-black rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="bg-surface-bg border-8 border-on-surface p-6 shadow-kinetic-sm flex gap-2">
+                    <div className="w-3 h-3 bg-on-surface rounded-none animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-3 h-3 bg-on-surface rounded-none animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-3 h-3 bg-on-surface rounded-none animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               )}
@@ -417,45 +418,45 @@ export function SoloSuccessAI() {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-8 border-t-8 border-black bg-neon-pink/10">
+            <form onSubmit={handleSend} className="p-8 border-t-8 border-on-surface bg-secondary/10">
               <div className="relative flex items-center">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={`Ask ${selectedAgent.name} anything...`}
-                  className="w-full bg-white border-8 border-black p-6 font-black text-xl focus:bg-neon-yellow/10 outline-none shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-2 focus:translate-y-2 transition-all"
+                  className="w-full bg-surface-bg border-8 border-on-surface p-6 font-black text-xl focus:bg-accent/10 outline-none shadow-kinetic-thud focus:shadow-none focus:translate-x-2 focus:translate-y-2 transition-all placeholder:text-on-surface/30 uppercase italic tracking-widest"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isGenerating}
-                  className="absolute right-4 p-4 bg-neon-green text-black border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 disabled:opacity-50 transition-all"
+                  className="absolute right-4 p-4 bg-accent text-black border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 disabled:opacity-50 transition-all"
                 >
                   <Send className="w-8 h-8 stroke-[4px]" />
                 </button>
               </div>
-              <p className="text-xs font-black uppercase italic text-center text-black/40 mt-6">
+              <p className="text-xs font-black uppercase italic text-center text-on-surface/40 mt-6 tracking-widest">
                 SoloSuccess AI can make mistakes. Check important info.
               </p>
             </form>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:30px_30px]">
-            <div className="w-32 h-32 bg-neon-pink border-8 border-black shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center mb-10 rotate-6">
+            <div className="w-32 h-32 bg-secondary border-8 border-on-surface shadow-kinetic flex items-center justify-center mb-10 rotate-6">
               <Cpu className="w-16 h-16 text-black stroke-[3px]" />
             </div>
-            <h2 className="text-5xl font-black text-black mb-4 uppercase italic tracking-tighter">Select an Expert Agent</h2>
-            <p className="text-2xl font-bold text-black/60 max-w-2xl mx-auto bg-white border-4 border-black p-6 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] -rotate-1">
-              Choose from our team of 10 specialized AI agents to get expert advice on any aspect of your solo business.
+            <h2 className="text-5xl font-black text-on-surface mb-4 uppercase italic tracking-tighter drop-shadow-[6px_6px_0px_#ff00ff]">Select an Expert Agent</h2>
+            <p className="text-2xl font-bold text-on-surface/60 max-w-2xl mx-auto bg-surface-bg border-4 border-on-surface p-6 shadow-kinetic-sm -rotate-1 italic">
+              "Choose from our team of 10 specialized AI agents to get expert advice on any aspect of your solo business."
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-16 w-full max-w-3xl">
               {AGENTS.slice(0, 6).map((a, i) => (
                 <div key={a.id} className={cn(
-                  "p-6 border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all",
-                  i % 2 === 0 ? "bg-white rotate-1" : "bg-white -rotate-1"
+                  "p-6 border-8 border-on-surface shadow-kinetic-sm transition-all",
+                  i % 2 === 0 ? "bg-surface-bg rotate-1" : "bg-surface-bg -rotate-1"
                 )}>
                   <a.icon className={cn("w-10 h-10 mb-4 stroke-[3px]", a.color.replace('bg-', 'text-'))} />
-                  <p className="text-sm font-black uppercase italic text-black">{a.role}</p>
+                  <p className="text-sm font-black uppercase italic text-on-surface tracking-tight">{a.role}</p>
                 </div>
               ))}
             </div>
@@ -470,47 +471,47 @@ export function SoloSuccessAI() {
               initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               exit={{ opacity: 0, scale: 0.9, rotate: 2 }}
-              className="bg-white border-[10px] border-black shadow-[30px_30px_0px_0px_rgba(0,0,0,1)] w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
+              className="bg-surface-bg border-[10px] border-on-surface shadow-kinetic w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col"
             >
-              <div className="p-8 border-b-8 border-black bg-neon-yellow flex items-center justify-between">
+              <div className="p-8 border-b-8 border-on-surface bg-accent flex items-center justify-between">
                 <div className="flex items-center gap-5">
-                  <div className="p-4 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
-                    <Bookmark className="w-8 h-8 text-black stroke-[3px]" />
+                  <div className="p-4 bg-surface-bg border-4 border-on-surface shadow-kinetic-thud">
+                    <Bookmark className="w-8 h-8 text-on-surface stroke-[3px]" />
                   </div>
                   <h2 className="text-4xl font-black text-black uppercase italic tracking-tighter">Saved Insights</h2>
                 </div>
                 <button 
                   onClick={() => setShowInsights(false)}
-                  className="p-3 bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+                  className="p-3 bg-surface-bg border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
                 >
-                  <X className="w-8 h-8 text-black stroke-[4px]" />
+                  <X className="w-8 h-8 text-on-surface stroke-[4px]" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-white">
+              <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-surface-bg">
                 {savedInsights.length === 0 ? (
                   <div className="text-center py-20">
-                    <Bookmark className="w-24 h-24 text-black/10 mx-auto mb-6 stroke-[3px]" />
-                    <p className="text-2xl font-black uppercase italic text-black/30">No insights saved yet.</p>
+                    <Bookmark className="w-24 h-24 text-on-surface/10 mx-auto mb-6 stroke-[3px]" />
+                    <p className="text-2xl font-black uppercase italic text-on-surface/30">No insights saved yet.</p>
                   </div>
                 ) : (
                   savedInsights.map((insight, index) => (
                     <div key={insight.id} className={cn(
-                      "p-8 border-8 border-black relative group shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]",
-                      index % 2 === 0 ? "bg-white rotate-1" : "bg-white -rotate-1"
+                      "p-8 border-8 border-on-surface relative group shadow-kinetic-sm",
+                      index % 2 === 0 ? "bg-surface-bg rotate-1" : "bg-surface-bg -rotate-1"
                     )}>
                       <div className="flex items-center gap-4 mb-6">
-                        <span className="px-3 py-1 bg-neon-blue border-2 border-black font-black uppercase italic text-xs">From {insight.agentName}</span>
-                        <span className="text-black/20 font-black">•</span>
-                        <span className="font-black uppercase text-xs text-black/40">
+                        <span className="px-3 py-1 bg-primary border-2 border-on-surface font-black uppercase italic text-xs">From {insight.agentName}</span>
+                        <span className="text-on-surface/20 font-black">•</span>
+                        <span className="font-black uppercase text-xs text-on-surface/40 italic">
                           {insight.createdAt?.toDate ? format(insight.createdAt.toDate(), 'MMM d, yyyy') : 'Recently'}
                         </span>
                       </div>
-                      <div className="prose prose-lg max-w-none font-bold text-black">
+                      <div className="prose prose-lg max-w-none font-bold text-on-surface italic">
                         <Markdown>{insight.content}</Markdown>
                       </div>
                       <button 
                         onClick={() => handleDeleteInsight(insight.id)}
-                        className="absolute -top-4 -right-4 p-3 bg-red-500 text-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute -top-4 -right-4 p-3 bg-secondary text-black border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 opacity-0 group-hover:opacity-100 transition-all"
                       >
                         <Trash2 className="w-6 h-6 stroke-[3px]" />
                       </button>

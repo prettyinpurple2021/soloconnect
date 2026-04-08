@@ -99,13 +99,13 @@ export function SoloSuccessAcademy() {
         <div className="relative z-10 max-w-4xl">
           <div className="inline-flex items-center gap-3 bg-[#FFFF00] border-8 border-black px-8 py-3 text-black font-black uppercase italic tracking-widest mb-12 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
             <Sparkles className="w-6 h-6 stroke-[3px]" />
-            <span className="text-xl">THE BRAIN CAVE: TROLL ACADEMY</span>
+            <span className="text-xl">THE BRAIN CAVE: FOUNDER ACADEMY</span>
           </div>
           <h1 className="text-8xl lg:text-[10rem] font-black text-white uppercase italic leading-[0.85] mb-12 tracking-tighter drop-shadow-[12px_12px_0px_#ff00ff]">
             MASTER THE ART OF <span className="text-[#00FF00]">GOING SOLO.</span>
           </h1>
           <p className="text-3xl font-black uppercase italic tracking-widest text-white/80 mb-20 leading-tight max-w-2xl bg-black/40 p-6 border-4 border-white/20">
-            EXPERT-LED SCROLLS DESIGNED SPECIFICALLY FOR LEGENDARY TROLLS, INDIE HACKERS, AND SOLO CHIEFS.
+            EXPERT-LED SCROLLS DESIGNED SPECIFICALLY FOR LEGENDARY FOUNDERS, INDIE HACKERS, AND SOLO CHIEFS.
           </p>
           <div className="flex flex-wrap gap-10">
             <button className="bg-[#00FF00] border-8 border-black text-black px-12 py-6 font-black text-3xl uppercase italic shadow-[15px_15px_0px_0px_rgba(0,0,0,1)] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all flex items-center gap-4">
@@ -239,7 +239,7 @@ export function SoloSuccessAcademy() {
         <div className="lg:w-1/2 space-y-12">
           <h2 className="text-7xl font-black text-black uppercase italic leading-[0.9] tracking-tighter drop-shadow-[8px_8px_0px_#ff00ff]">LEARN TOGETHER, GROW FASTER.</h2>
           <p className="text-3xl font-black italic leading-tight text-black/80">
-            "JOIN STUDY TRIBES, PARTICIPATE IN LEGENDARY CHALLENGES, AND CONNECT WITH FELLOW TROLLS WHO ARE ON THE SAME PATH TO GLORY."
+            "JOIN STUDY TRIBES, PARTICIPATE IN LEGENDARY CHALLENGES, AND CONNECT WITH FELLOW FOUNDERS WHO ARE ON THE SAME PATH TO GLORY."
           </p>
           <div className="flex gap-8">
             <Link to="/academy-groups" className="bg-black border-8 border-black text-white px-12 py-6 font-black text-3xl uppercase italic shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all flex items-center gap-4">
@@ -359,7 +359,7 @@ export function SoloSuccessAcademy() {
                       </div>
                       <div className="flex items-center justify-between text-lg font-black uppercase italic text-black tracking-widest">
                         <div className="flex items-center gap-4">
-                          <Users className="w-8 h-8 stroke-[3px]" /> TROLLS
+                          <Users className="w-8 h-8 stroke-[3px]" /> FOUNDERS
                         </div>
                         <span className="text-2xl">{selectedCourse.students.toLocaleString()}</span>
                       </div>
@@ -381,7 +381,7 @@ export function SoloSuccessAcademy() {
                         {selectedCourse.instructor[0]}
                       </div>
                       <div>
-                        <p className="text-xs font-black uppercase italic tracking-widest text-black/40">CHIEF TROLL</p>
+                        <p className="text-xs font-black uppercase italic tracking-widest text-black/40">CHIEF FOUNDER</p>
                         <p className="text-3xl font-black uppercase italic tracking-tighter text-black leading-none">{selectedCourse.instructor}</p>
                       </div>
                     </div>

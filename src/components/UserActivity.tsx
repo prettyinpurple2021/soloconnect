@@ -125,7 +125,7 @@ export function UserActivity({ userId }: UserActivityProps) {
       <div className="text-center py-16 bg-[#FFFF00] border-[8px] border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] rotate-[-1deg]">
         <Ghost className="w-20 h-20 text-black mx-auto mb-6 animate-bounce" />
         <p className="text-2xl font-black text-black uppercase italic tracking-tighter">NO PULSE DETECTED!</p>
-        <p className="text-xs font-black text-black/60 uppercase italic mt-2 tracking-widest">THIS TROLL IS CURRENTLY LURKING IN THE SHADOWS.</p>
+        <p className="text-xs font-black text-black/60 uppercase italic mt-2 tracking-widest">THIS FOUNDER IS CURRENTLY LURKING IN THE SHADOWS.</p>
       </div>
     );
   }

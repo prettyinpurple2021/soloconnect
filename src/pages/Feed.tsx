@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -13,6 +13,7 @@ import { Link } from 'react-router';
 import { toast } from 'react-hot-toast';
 import { PostComments } from '../components/PostComments';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { RichTextEditor } from '../components/RichTextEditor';
 import { generatePostContent, generateImage, analyzePulse } from '../services/geminiService';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -200,6 +201,22 @@ export function Feed() {
     }
   };
 
+  const toggleSavePost = async (postId: string) => {
+    if (!user || !userProfile) return;
+    const userRef = doc(db, 'users', user.uid);
+    const isSaved = userProfile.savedPosts?.includes(postId);
+
+    try {
+      await updateDoc(userRef, {
+        savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
+      });
+      toast.success(isSaved ? 'Post removed from bookmarks.' : 'Post bookmarked for later!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+      toast.error('Failed to update bookmarks.');
+    }
+  };
+
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -341,7 +358,11 @@ export function Feed() {
 
   const filteredPosts = posts
     .filter(post => !userProfile?.blockedUsers?.includes(post.authorId))
-    .filter(post => filterTag === 'All' || post.tags?.includes(filterTag))
+    .filter(post => {
+      if (filterTag === 'All') return true;
+      if (filterTag === 'Saved') return userProfile?.savedPosts?.includes(post.id);
+      return post.tags?.includes(filterTag);
+    })
     .sort((a, b) => {
       if (sortBy === 'recent') {
         const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
@@ -377,7 +398,7 @@ export function Feed() {
               </h2>
               <div className="mt-4 bg-surface-bg border-[4px] border-black p-4 shadow-kinetic-sm inline-block">
                 <p className="text-primary font-mono text-sm uppercase italic leading-tight">
-                  > {pulseInsight}
+                  {">"} {pulseInsight}
                 </p>
               </div>
             </div>
@@ -428,7 +449,7 @@ export function Feed() {
               <p className="text-[8px] font-bold uppercase italic tracking-widest mb-3 text-on-surface/60">TOP_NODE</p>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 border-[4px] border-on-surface bg-accent shadow-kinetic-thud overflow-hidden">
-                  <img src="https://picsum.photos/seed/troll/100/100" alt="Top Troll" className="w-full h-full object-cover grayscale" />
+                  <img src="https://picsum.photos/seed/founder/100/100" alt="Top Founder" className="w-full h-full object-cover grayscale" />
                 </div>
                 <div>
                   <p className="text-sm font-black uppercase italic tracking-tight text-on-surface leading-none">@NEON_GLOW</p>
@@ -486,11 +507,10 @@ export function Feed() {
               </div>
             </div>
             <div className="flex-1 space-y-8">
-              <textarea
-                value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
+              <RichTextEditor
+                content={newPost}
+                onChange={setNewPost}
                 placeholder="TRANSMIT_DATA_HERE..."
-                className="w-full bg-surface-bg border-[6px] border-on-surface p-6 text-xl font-bold uppercase italic tracking-tight placeholder:text-on-surface/20 focus:outline-none focus:border-primary min-h-[160px]"
               />
               
               {imagePreviews.length > 0 && (
@@ -631,7 +651,7 @@ export function Feed() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          {['All', ...COMMON_TAGS].map(tag => (
+          {['All', 'Saved', ...COMMON_TAGS].map(tag => (
             <button
               key={tag}
               onClick={() => setFilterTag(tag)}
@@ -750,11 +770,10 @@ export function Feed() {
 
               {editingPostId === post.id ? (
                 <div className="mb-8">
-                  <textarea
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full bg-surface-bg border-[6px] border-on-surface p-4 text-lg font-bold uppercase italic tracking-tight focus:outline-none focus:border-primary min-h-[120px]"
-                    autoFocus
+                  <RichTextEditor
+                    content={editContent}
+                    onChange={setEditContent}
+                    className="text-lg min-h-[120px]"
                   />
                   <div className="flex justify-end gap-4 mt-4">
                     <button
@@ -776,9 +795,10 @@ export function Feed() {
                 </div>
               ) : (
                 <div className="mb-8">
-                  <p className="text-on-surface font-bold text-xl italic leading-tight tracking-tight mb-6">
-                    {post.content}
-                  </p>
+                  <div 
+                    className="text-on-surface font-bold text-xl italic leading-tight tracking-tight mb-6 prose prose-invert max-w-none prose-p:leading-tight prose-p:my-0"
+                    dangerouslySetInnerHTML={{ __html: post.content }}
+                  />
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex flex-wrap gap-3">
                       {post.tags.map(tag => (
@@ -810,16 +830,22 @@ export function Feed() {
               )}
 
               <div className="flex items-center gap-8 pt-8 border-t-[6px] border-on-surface">
-                <button 
+                <motion.button 
+                  whileTap={{ scale: 0.8 }}
                   onClick={() => toggleLike(post.id, post.likes || [])}
                   className={cn(
                     "flex items-center gap-3 font-bold text-[10px] uppercase italic transition-all group",
-                    post.likes?.includes(user?.uid || '') ? 'text-secondary scale-110' : 'text-on-surface hover:text-secondary'
+                    post.likes?.includes(user?.uid || '') ? 'text-secondary' : 'text-on-surface hover:text-secondary'
                   )}
                 >
-                  <Heart className={cn("w-5 h-5", post.likes?.includes(user?.uid || '') && "fill-current")} />
+                  <motion.div
+                    animate={post.likes?.includes(user?.uid || '') ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Heart className={cn("w-5 h-5", post.likes?.includes(user?.uid || '') && "fill-current")} />
+                  </motion.div>
                   {post.likes?.length || 0}
-                </button>
+                </motion.button>
                 <button 
                   onClick={() => setExpandedComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
                   className="flex items-center gap-3 font-bold text-[10px] uppercase italic text-on-surface hover:text-primary transition-all"
@@ -827,6 +853,23 @@ export function Feed() {
                   <MessageCircle className="w-5 h-5" />
                   {post.commentCount || 0}
                 </button>
+                <motion.button 
+                  whileTap={{ scale: 0.8 }}
+                  onClick={() => toggleSavePost(post.id)}
+                  className={cn(
+                    "flex items-center gap-3 font-bold text-[10px] uppercase italic transition-all group",
+                    userProfile?.savedPosts?.includes(post.id) ? 'text-accent' : 'text-on-surface hover:text-accent'
+                  )}
+                  title={userProfile?.savedPosts?.includes(post.id) ? "UNSAVE_POST" : "SAVE_POST"}
+                >
+                  <motion.div
+                    animate={userProfile?.savedPosts?.includes(post.id) ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Bookmark className={cn("w-5 h-5", userProfile?.savedPosts?.includes(post.id) && "fill-current")} />
+                  </motion.div>
+                  {userProfile?.savedPosts?.includes(post.id) ? 'SAVED' : 'SAVE'}
+                </motion.button>
                 <button className="flex items-center gap-3 font-bold text-[10px] uppercase italic text-on-surface hover:text-accent transition-all ml-auto">
                   <Share2 className="w-5 h-5" />
                   SHARE

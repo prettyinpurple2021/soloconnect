@@ -200,7 +200,7 @@ export function SoloAssistant() {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="SPILL IT, TROLL..."
+                        placeholder="SPILL IT, FOUNDER..."
                         className="flex-1 bg-transparent border-none py-5 pl-6 pr-14 text-sm font-black uppercase italic text-black placeholder:text-black/40 focus:ring-0"
                       />
                       <button

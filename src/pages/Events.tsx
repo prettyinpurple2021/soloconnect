@@ -295,7 +295,7 @@ export function Events() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 bg-primary border-[12px] border-on-surface p-12 lg:p-20 shadow-kinetic -rotate-1">
         <div className="space-y-4">
           <h1 className="text-6xl lg:text-8xl font-black text-black uppercase italic leading-none tracking-tighter drop-shadow-[6px_6px_0px_#FFFFFF]">THE GATHERING</h1>
-          <p className="text-2xl font-black uppercase italic tracking-widest text-black/80 leading-tight">WHERE THE TROLLS UNITE IN THE REAL WORLD.</p>
+          <p className="text-2xl font-black uppercase italic tracking-widest text-black/80 leading-tight">WHERE THE FOUNDERS UNITE IN THE REAL WORLD.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-8">
           <div className="bg-surface-bg border-8 border-on-surface p-2 flex items-center gap-2 shadow-kinetic-sm rotate-1">
@@ -436,7 +436,7 @@ export function Events() {
                 value={newEvent.description}
                 onChange={e => setNewEvent({...newEvent, description: e.target.value})}
                 className="w-full bg-surface-bg border-8 border-on-surface px-8 py-6 min-h-[200px] font-black uppercase italic text-xl shadow-kinetic-sm focus:shadow-none focus:bg-secondary/10 transition-all outline-none resize-none"
-                placeholder="WHAT'S THE PLAN, TROLL?"
+                placeholder="WHAT'S THE PLAN, FOUNDER?"
               />
             </div>
             <div className="flex flex-col sm:flex-row justify-end gap-8 pt-12 border-t-[10px] border-on-surface">
@@ -549,7 +549,7 @@ export function Events() {
                     </div>
                     <div className="flex items-center gap-4 bg-on-surface text-surface-bg px-6 py-3 border-4 border-on-surface shadow-kinetic-thud">
                       <Users className="w-6 h-6 stroke-[3px]" />
-                      <span className="text-lg">{event.attendees?.length || 0} TROLLS GOING</span>
+                      <span className="text-lg">{event.attendees?.length || 0} FOUNDERS GOING</span>
                     </div>
                     
                     {/* Attendee Avatars */}
@@ -646,7 +646,7 @@ export function Events() {
               className="bg-surface-bg border-[16px] border-on-surface w-full max-w-2xl overflow-hidden flex flex-col shadow-kinetic-active max-h-[90vh]"
             >
               <div className="p-10 border-b-[12px] border-on-surface bg-secondary flex items-center justify-between shrink-0">
-                <h3 className="text-5xl font-black uppercase italic text-white tracking-tighter drop-shadow-[4px_4px_0px_#000000]">SUMMON TROLLS</h3>
+                <h3 className="text-5xl font-black uppercase italic text-white tracking-tighter drop-shadow-[4px_4px_0px_#000000]">SUMMON FOUNDERS</h3>
                 <button 
                   onClick={() => setInviteModalOpen(false)}
                   className="p-6 bg-surface-bg border-8 border-on-surface hover:bg-accent transition-all shadow-kinetic-thud active:shadow-none active:translate-x-2 active:translate-y-2"
@@ -689,7 +689,7 @@ export function Events() {
                 ) : (
                   <div className="text-center py-32 space-y-8">
                     <Users className="w-32 h-32 text-on-surface/10 mx-auto stroke-[3px]" />
-                    <p className="text-2xl font-black uppercase italic tracking-widest text-on-surface/40">YOU HAVE NO TROLLS TO SUMMON YET.</p>
+                    <p className="text-2xl font-black uppercase italic tracking-widest text-on-surface/40">YOU HAVE NO FOUNDERS TO SUMMON YET.</p>
                   </div>
                 )}
               </div>
@@ -700,7 +700,7 @@ export function Events() {
                   disabled={selectedConnections.length === 0 || isInviting}
                   className="w-full bg-on-surface border-8 border-on-surface text-surface-bg py-10 font-black text-4xl uppercase italic shadow-kinetic hover:translate-x-2 hover:translate-y-2 hover:shadow-none disabled:opacity-50 transition-all"
                 >
-                  {isInviting ? 'SUMMONING...' : `SUMMON ${selectedConnections.length} TROLL${selectedConnections.length !== 1 ? 'S' : ''}`}
+                  {isInviting ? 'SUMMONING...' : `SUMMON ${selectedConnections.length} FOUNDER${selectedConnections.length !== 1 ? 'S' : ''}`}
                 </button>
               </div>
             </motion.div>

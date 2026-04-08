@@ -21,6 +21,33 @@
       },
       "required": ["uid", "displayName", "email", "createdAt"]
     },
+    "Insight": {
+      "title": "Insight",
+      "description": "A saved insight from an AI agent",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "agentId": { "type": "string" },
+        "agentName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "agentId", "agentName", "content", "createdAt"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "A document or ideation note created by SoloScribe",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["ideation", "document"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content", "type", "createdAt", "updatedAt"]
+    },
     "Post": {
       "title": "Post",
       "description": "A social feed post",
@@ -186,6 +213,14 @@
     "personal_events/{eventId}": {
       "schema": { "$ref": "#/entities/PersonalEvent" },
       "description": "Personal user events and reminders"
+    },
+    "insights/{insightId}": {
+      "schema": { "$ref": "#/entities/Insight" },
+      "description": "Saved AI insights"
+    },
+    "documents/{docId}": {
+      "schema": { "$ref": "#/entities/Document" },
+      "description": "SoloScribe documents"
     }
   }
 }

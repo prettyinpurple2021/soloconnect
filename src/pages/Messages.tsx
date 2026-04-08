@@ -177,11 +177,11 @@ export function Messages() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-white">
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-surface-bg">
         <div className="relative">
-          <div className="w-24 h-24 border-[10px] border-black border-t-neon-pink rounded-full animate-spin shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]"></div>
+          <div className="w-24 h-24 border-[10px] border-on-surface border-t-primary rounded-none animate-spin shadow-kinetic-sm"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-4 h-4 bg-neon-yellow border-2 border-black rounded-full animate-ping"></div>
+            <div className="w-4 h-4 bg-secondary border-2 border-on-surface rounded-none animate-ping"></div>
           </div>
         </div>
       </div>
@@ -189,37 +189,37 @@ export function Messages() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] bg-white border-[10px] border-black shadow-[30px_30px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex relative">
+    <div className="h-[calc(100vh-8rem)] bg-surface-bg border-[10px] border-on-surface shadow-kinetic overflow-hidden flex relative font-sans">
       {/* Chat List */}
-      <div className="w-96 border-r-[10px] border-black flex flex-col bg-zinc-50 relative z-20">
-        <div className="p-10 border-b-[10px] border-black bg-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-neon-blue border-l-8 border-b-8 border-black -rotate-12 translate-x-8 -translate-y-8"></div>
+      <div className="w-96 border-r-[10px] border-on-surface flex flex-col bg-surface-container relative z-20">
+        <div className="p-10 border-b-[10px] border-on-surface bg-surface-bg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-primary border-l-8 border-b-8 border-on-surface -rotate-12 translate-x-8 -translate-y-8"></div>
           
           <div className="flex items-center justify-between mb-8 relative z-10">
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-black drop-shadow-[4px_4px_0px_#00ffff]">Troll Talk</h1>
+            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-on-surface drop-shadow-[4px_4px_0px_#00ffff]">Founder Talk</h1>
             <button 
-              className="bg-black text-white p-3 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all active:bg-neon-pink"
-              onClick={() => toast.success('Search for a troll on their profile to start a chat!')}
+              className="bg-on-surface text-surface-bg p-3 border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all active:bg-secondary"
+              onClick={() => toast.success('Search for a founder on their profile to start a chat!')}
             >
               <Send className="w-6 h-6 stroke-[3px]" />
             </button>
           </div>
           <div className="relative z-10">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-black stroke-[3px]" />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-on-surface stroke-[3px]" />
             <input 
               type="text" 
               placeholder="SEARCH ECHOES..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border-8 border-black py-4 pl-16 pr-6 text-sm uppercase font-black italic tracking-widest shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all placeholder:text-black/30"
+              className="w-full bg-surface-bg border-8 border-on-surface py-4 pl-16 pr-6 text-sm uppercase font-black italic tracking-widest shadow-kinetic-thud focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all placeholder:text-on-surface/30"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-zinc-100">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-surface-container">
           {filteredChats.length === 0 ? (
-            <div className="p-16 text-center bg-white border-4 border-dashed border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-black/40 italic">
+            <div className="p-16 text-center bg-surface-bg border-4 border-dashed border-on-surface shadow-kinetic-sm">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-on-surface/40 italic">
                 {searchTerm ? 'NO ECHOES FOUND.' : 'NO ECHOES YET.'}
               </p>
             </div>
@@ -233,27 +233,28 @@ export function Messages() {
                   key={chat.id}
                   onClick={() => setSelectedChat(chat)}
                   className={cn(
-                    "w-full border-8 border-black p-5 flex items-center gap-5 transition-all text-left group relative",
+                    "w-full border-8 border-on-surface p-5 flex items-center gap-5 transition-all text-left group relative",
                     isActive 
-                      ? "bg-neon-blue shadow-none translate-x-1 translate-y-1" 
-                      : "bg-white shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                      ? "bg-primary shadow-none translate-x-1 translate-y-1" 
+                      : "bg-surface-bg shadow-kinetic-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
                   )}
                 >
                   <div className="relative shrink-0">
-                    <div className="w-16 h-16 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden group-hover:-rotate-6 transition-transform">
+                    <div className="w-16 h-16 border-4 border-on-surface shadow-kinetic-thud overflow-hidden group-hover:-rotate-6 transition-transform">
                       <img 
                         src={otherUser?.photoURL || `https://ui-avatars.com/api/?name=${otherUser?.displayName || 'User'}&background=random`} 
                         alt={otherUser?.displayName || 'User'} 
                         className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
                       />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-neon-green border-4 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"></div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-4 border-on-surface rounded-none shadow-kinetic-thud"></div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <p className="text-base font-black uppercase italic tracking-tight text-black truncate">{otherUser?.displayName || 'LOADING...'}</p>
+                      <p className="text-base font-black uppercase italic tracking-tight text-on-surface truncate">{otherUser?.displayName || 'LOADING...'}</p>
                       {chat.lastMessageAt && (
-                        <span className="text-[8px] text-black/40 uppercase font-black tracking-widest italic">
+                        <span className="text-[8px] text-on-surface/40 uppercase font-black tracking-widest italic">
                           {formatDistanceToNow(chat.lastMessageAt.toDate(), { addSuffix: false })}
                         </span>
                       )}
@@ -261,12 +262,12 @@ export function Messages() {
                     <div className="flex justify-between items-center gap-2">
                       <p className={cn(
                         "text-[10px] truncate flex-1 font-black italic tracking-tight",
-                        chat.unreadCount?.[user?.uid || ''] ? "text-black" : "text-black/40"
+                        chat.unreadCount?.[user?.uid || ''] ? "text-on-surface" : "text-on-surface/40"
                       )}>
                         {chat.lastMessage || 'No echoes yet'}
                       </p>
                       {chat.unreadCount?.[user?.uid || ''] ? (
-                        <span className="w-4 h-4 bg-neon-pink border-4 border-black rounded-full flex-shrink-0 animate-pulse shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"></span>
+                        <span className="w-4 h-4 bg-secondary border-4 border-on-surface rounded-none flex-shrink-0 animate-pulse shadow-kinetic-thud"></span>
                       ) : null}
                     </div>
                   </div>
@@ -278,35 +279,36 @@ export function Messages() {
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1 flex flex-col bg-zinc-50 relative">
+      <div className="flex-1 flex flex-col bg-surface-bg relative">
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-8 bg-white border-b-[10px] border-black flex items-center justify-between relative z-10">
+            <div className="p-8 bg-surface-bg border-b-[10px] border-on-surface flex items-center justify-between relative z-10">
               <div className="flex items-center gap-6">
                 <div className="relative">
-                  <div className="w-16 h-16 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden -rotate-3">
+                  <div className="w-16 h-16 border-4 border-on-surface shadow-kinetic-thud overflow-hidden -rotate-3">
                     <img 
                       src={getOtherParticipant(selectedChat)?.photoURL || `https://ui-avatars.com/api/?name=${getOtherParticipant(selectedChat)?.displayName || 'User'}&background=random`} 
                       alt={getOtherParticipant(selectedChat)?.displayName || 'User'} 
                       className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
                     />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-neon-green border-4 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"></div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-4 border-on-surface rounded-none shadow-kinetic-thud"></div>
                 </div>
                 <div>
-                  <p className="text-3xl font-black uppercase italic tracking-tighter text-black drop-shadow-[2px_2px_0px_#00ffff]">{getOtherParticipant(selectedChat)?.displayName || 'LOADING...'}</p>
-                  <p className="text-xs text-neon-green font-black uppercase tracking-[0.2em] italic">Online & Active</p>
+                  <p className="text-3xl font-black uppercase italic tracking-tighter text-on-surface drop-shadow-[2px_2px_0px_#00ffff]">{getOtherParticipant(selectedChat)?.displayName || 'LOADING...'}</p>
+                  <p className="text-xs text-accent font-black uppercase tracking-[0.2em] italic">Online & Active</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <button className="bg-white border-4 border-black p-3 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-neon-blue">
+                <button className="bg-surface-bg border-4 border-on-surface p-3 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-primary">
                   <Phone className="w-6 h-6 stroke-[3px]" />
                 </button>
-                <button className="bg-white border-4 border-black p-3 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-neon-green">
+                <button className="bg-surface-bg border-4 border-on-surface p-3 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-accent">
                   <Video className="w-6 h-6 stroke-[3px]" />
                 </button>
-                <button className="bg-white border-4 border-black p-3 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-neon-pink">
+                <button className="bg-surface-bg border-4 border-on-surface p-3 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-secondary">
                   <MoreVertical className="w-6 h-6 stroke-[3px]" />
                 </button>
               </div>
@@ -329,25 +331,26 @@ export function Messages() {
                     {!isMe && (
                       <div className="w-12 h-12 shrink-0">
                         {showAvatar && (
-                          <div className="w-12 h-12 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden rotate-3">
+                          <div className="w-12 h-12 border-4 border-on-surface shadow-kinetic-thud overflow-hidden rotate-3">
                             <img 
                               src={getOtherParticipant(selectedChat)?.photoURL || `https://ui-avatars.com/api/?name=${getOtherParticipant(selectedChat)?.displayName || 'User'}&background=random`} 
                               alt="Avatar" 
                               className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
                             />
                           </div>
                         )}
                       </div>
                     )}
                     <div className={cn(
-                      "max-w-[70%] p-6 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-base font-black italic tracking-tight relative",
+                      "max-w-[70%] p-6 border-4 border-on-surface shadow-kinetic-sm text-base font-black italic tracking-tight relative",
                       isMe 
-                        ? "bg-neon-blue text-black rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl" 
-                        : "bg-white text-black rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
+                        ? "bg-primary text-black rounded-none" 
+                        : "bg-surface-container text-on-surface rounded-none"
                     )}>
                       <p className="leading-tight">"{msg.content}"</p>
                       <p className={cn(
-                        "text-[8px] mt-3 font-black uppercase tracking-widest text-black/40 italic",
+                        "text-[8px] mt-3 font-black uppercase tracking-widest text-on-surface/40 italic",
                         isMe ? "text-right" : "text-left"
                       )}>
                         {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true }) : 'SENDING...'}
@@ -360,9 +363,9 @@ export function Messages() {
             </div>
 
             {/* Input Area */}
-            <div className="p-10 bg-white border-t-[10px] border-black relative z-10">
+            <div className="p-10 bg-surface-bg border-t-[10px] border-on-surface relative z-10">
               <form onSubmit={handleSendMessage} className="flex items-center gap-6">
-                <button type="button" className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-neon-yellow">
+                <button type="button" className="bg-surface-bg border-4 border-on-surface p-4 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-secondary">
                   <Paperclip className="w-8 h-8 stroke-[3px]" />
                 </button>
                 <div className="flex-1 relative">
@@ -371,16 +374,16 @@ export function Messages() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="TYPE AN ECHO..."
-                    className="w-full bg-white border-8 border-black py-5 px-8 pr-20 text-lg font-black uppercase italic tracking-widest shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all placeholder:text-black/30"
+                    className="w-full bg-surface-bg border-8 border-on-surface py-5 px-8 pr-20 text-lg font-black uppercase italic tracking-widest shadow-kinetic-thud focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all placeholder:text-on-surface/30"
                   />
-                  <button type="button" className="absolute right-6 top-1/2 -translate-y-1/2 text-black hover:text-neon-pink transition-all hover:scale-125">
+                  <button type="button" className="absolute right-6 top-1/2 -translate-y-1/2 text-on-surface hover:text-secondary transition-all hover:scale-125">
                     <Smile className="w-8 h-8 stroke-[3px]" />
                   </button>
                 </div>
                 <button 
                   type="submit"
                   disabled={!newMessage.trim()}
-                  className="bg-black text-white p-5 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:bg-neon-green"
+                  className="bg-on-surface text-surface-bg p-5 border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:bg-accent"
                 >
                   <Send className="w-8 h-8 stroke-[3px]" />
                 </button>
@@ -389,13 +392,13 @@ export function Messages() {
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-20 text-center bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:30px_30px]">
-            <div className="w-32 h-32 bg-neon-yellow border-8 border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center mb-12 rotate-6 hover:rotate-0 transition-transform">
+            <div className="w-32 h-32 bg-secondary border-8 border-on-surface shadow-kinetic flex items-center justify-center mb-12 rotate-6 hover:rotate-0 transition-transform">
               <Send className="w-16 h-16 text-black -rotate-12 stroke-[3px]" />
             </div>
-            <h2 className="text-5xl font-black uppercase italic tracking-tighter text-black mb-6 drop-shadow-[6px_6px_0px_#ff00ff]">Your Echoes</h2>
-            <div className="bg-white border-4 border-black p-6 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] -rotate-1">
-              <p className="text-black font-black italic text-xl tracking-tight">
-                "Select a conversation from the left to start chatting with other solo trolls."
+            <h2 className="text-5xl font-black uppercase italic tracking-tighter text-on-surface mb-6 drop-shadow-[6px_6px_0px_#ff00ff]">Your Echoes</h2>
+            <div className="bg-surface-container border-4 border-on-surface p-6 shadow-kinetic-sm -rotate-1">
+              <p className="text-on-surface font-black italic text-xl tracking-tight">
+                "Select a conversation from the left to start chatting with other solo founders."
               </p>
             </div>
           </div>

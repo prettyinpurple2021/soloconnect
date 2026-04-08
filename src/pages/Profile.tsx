@@ -97,11 +97,35 @@ export function Profile() {
     }
   };
 
-  const handleProfileImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setProfileImage(file);
-      setProfileImagePreview(URL.createObjectURL(file));
+      
+      if (isEditing) {
+        setProfileImage(file);
+        setProfileImagePreview(URL.createObjectURL(file));
+      } else {
+        if (!userId || !isOwner) return;
+        const toastId = toast.loading('UPLOADING_NEW_FACE...');
+        try {
+          const imageRef = ref(storage, `profiles/${userId}/${Date.now()}_${file.name}`);
+          await uploadBytes(imageRef, file);
+          const photoURL = await getDownloadURL(imageRef);
+          
+          await updateDoc(doc(db, 'users', userId), {
+            photoURL,
+            updatedAt: serverTimestamp()
+          });
+          
+          if (profile) {
+            setProfile({ ...profile, photoURL });
+          }
+          toast.success('FACE_SWAP_COMPLETE!', { id: toastId });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+          toast.error('UPLOAD_FAILED_FOUNDER!', { id: toastId });
+        }
+      }
     }
   };
 
@@ -239,6 +263,12 @@ export function Profile() {
     onConfirm: () => {}
   });
 
+  const handleStartChat = () => {
+    if (userId) {
+      navigate(`/messages?chat=${userId}`);
+    }
+  };
+
   const handleBlockUser = async () => {
     if (!currentUser || !userId) return;
     setConfirmModal({
@@ -310,8 +340,8 @@ export function Profile() {
     return (
       <div className="bg-secondary border-[10px] border-on-surface text-center py-32 shadow-kinetic">
         <Ghost className="w-32 h-32 text-black mx-auto mb-10 animate-bounce" />
-        <h3 className="text-5xl font-black text-black uppercase italic mb-4 drop-shadow-[4px_4px_0px_#fff]">TROLL_NOT_FOUND!</h3>
-        <p className="text-black font-bold uppercase tracking-widest bg-surface-bg border-[4px] border-black px-6 py-3 inline-block shadow-kinetic-thud">THIS_TROLL_MIGHT_BE_HIDING_IN_A_CAVE.</p>
+        <h3 className="text-5xl font-black text-black uppercase italic mb-4 drop-shadow-[4px_4px_0px_#fff]">FOUNDER_NOT_FOUND!</h3>
+        <p className="text-black font-bold uppercase tracking-widest bg-surface-bg border-[4px] border-black px-6 py-3 inline-block shadow-kinetic-thud">THIS_FOUNDER_MIGHT_BE_HIDING_IN_A_CAVE.</p>
       </div>
     );
   }
@@ -365,15 +395,27 @@ export function Profile() {
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
-                {isEditing && (
+                {isOwner && (
                   <button 
                     onClick={() => profileImageInputRef.current?.click()}
                     className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Camera className="w-16 h-16 text-white" />
+                    <div className="flex flex-col items-center gap-2 text-white">
+                      <Camera className="w-12 h-12" />
+                      <span className="font-black text-xs uppercase italic tracking-tighter bg-black border-[2px] border-white px-3 py-1">REPLACE_FACE</span>
+                    </div>
                   </button>
                 )}
               </div>
+              {isOwner && (
+                <button 
+                  onClick={() => profileImageInputRef.current?.click()}
+                  className="absolute -top-4 -left-4 bg-primary border-[4px] border-on-surface p-3 shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all z-20"
+                  title="Upload New Face"
+                >
+                  <Camera className="w-6 h-6" />
+                </button>
+              )}
               <div className="absolute -bottom-6 -right-6 bg-accent border-[4px] border-on-surface p-4 shadow-kinetic-thud rotate-[12deg]">
                 <Star className="w-10 h-10 fill-secondary" />
               </div>
@@ -399,7 +441,7 @@ export function Profile() {
                   <h1 className="text-7xl font-black text-on-surface uppercase italic drop-shadow-[6px_6px_0px_#00FFFF] flex items-center gap-6 tracking-tighter leading-none">
                     {profile.displayName}
                     {profile.isVerified && (
-                      <div className="bg-primary border-[4px] border-on-surface p-2 shadow-kinetic-thud" title="Verified Troll">
+                      <div className="bg-primary border-[4px] border-on-surface p-2 shadow-kinetic-thud" title="Verified Founder">
                         <Check className="w-6 h-6 stroke-[4px]" />
                       </div>
                     )}
@@ -419,7 +461,7 @@ export function Profile() {
                     <option value="Specialist">Specialist</option>
                   </select>
                 ) : (
-                  <span className="bg-secondary border-[4px] border-on-surface px-4 py-1 text-black font-bold text-sm uppercase italic shadow-kinetic-thud">{profile.founderType || 'Troll King'}</span>
+                  <span className="bg-secondary border-[4px] border-on-surface px-4 py-1 text-black font-bold text-sm uppercase italic shadow-kinetic-thud">{profile.founderType || 'Solo King'}</span>
                 )}
                 <span className="bg-primary border-[4px] border-on-surface px-4 py-1 text-black font-bold text-sm uppercase italic shadow-kinetic-thud">{profile.connections?.length || 0} TRIBE_MEMBERS</span>
                 <span className="bg-accent border-[4px] border-on-surface px-4 py-1 text-black font-bold text-sm uppercase italic shadow-kinetic-thud">LVL {Math.floor(Math.random() * 50) + 1}</span>
@@ -506,7 +548,7 @@ export function Profile() {
             </div>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="font-black text-2xl uppercase italic tracking-tighter">TROLL_MOMENTUM</h3>
+                <h3 className="font-black text-2xl uppercase italic tracking-tighter">FOUNDER_MOMENTUM</h3>
                 <Zap className="w-10 h-10 text-accent fill-accent" />
               </div>
               <div className="space-y-8">
@@ -538,17 +580,17 @@ export function Profile() {
           </div>
 
           <div className="bg-surface-container border-[10px] border-on-surface p-10 shadow-kinetic rotate-[1deg]">
-            <h3 className="font-black text-3xl uppercase italic mb-10 border-b-[8px] border-on-surface pb-4 tracking-tighter drop-shadow-[2px_2px_0px_#FF00FF]">ABOUT_THE_TROLL</h3>
+            <h3 className="font-black text-3xl uppercase italic mb-10 border-b-[8px] border-on-surface pb-4 tracking-tighter drop-shadow-[2px_2px_0px_#FF00FF]">ABOUT_THE_FOUNDER</h3>
             {isEditing ? (
               <textarea 
                 value={editForm.bio || ''} 
                 onChange={e => setEditForm({...editForm, bio: e.target.value})}
-                placeholder="SPILL_THE_TEA_TROLL..."
+                placeholder="SPILL_THE_TEA_FOUNDER..."
                 className="w-full bg-accent border-[4px] border-on-surface p-6 font-bold text-lg uppercase italic shadow-kinetic-thud focus:outline-none min-h-[250px] focus:bg-primary/10 transition-colors"
               />
             ) : (
               <p className="text-on-surface font-bold leading-relaxed text-xl italic tracking-tight">
-                "{profile.bio || "THIS_TROLL_IS_A_MYSTERY..."}"
+                "{profile.bio || "THIS_FOUNDER_IS_A_MYSTERY..."}"
               </p>
             )}
 
@@ -878,7 +920,7 @@ export function Profile() {
                     value={newProject.title}
                     onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
                     className="w-full bg-surface-bg border-4 border-on-surface p-4 font-black text-lg uppercase italic shadow-kinetic-thud focus:outline-none"
-                    placeholder="e.g., TROLL DESIGN SYSTEM"
+                    placeholder="e.g., FOUNDER DESIGN SYSTEM"
                   />
                 </div>
 
@@ -889,7 +931,7 @@ export function Profile() {
                     value={newProject.description}
                     onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                     className="w-full bg-surface-bg border-4 border-on-surface p-4 font-black text-lg uppercase italic shadow-kinetic-thud focus:outline-none min-h-[160px] resize-none"
-                    placeholder="WHAT DID YOU BUILD, TROLL?"
+                    placeholder="WHAT DID YOU BUILD, FOUNDER?"
                   />
                 </div>
 

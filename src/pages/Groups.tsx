@@ -227,8 +227,8 @@ export function Groups() {
     if (!user) return;
     setConfirmModal({
       isOpen: true,
-      title: 'BANISH_TROLL',
-      message: 'ARE_YOU_SURE_YOU_WANT_TO_BANISH_THIS_MEMBER_FROM_THE_TRIBE_COUNCIL?',
+      title: 'REMOVE_MEMBER',
+      message: 'ARE_YOU_SURE_YOU_WANT_TO_REMOVE_THIS_MEMBER_FROM_THE_TRIBE_COUNCIL?',
       onConfirm: async () => {
         const groupRef = doc(db, 'groups', groupId);
         try {
@@ -266,7 +266,7 @@ export function Groups() {
           >
             THE TRIBES
           </motion.h1>
-          <p className="text-2xl font-black uppercase italic tracking-widest text-surface-bg leading-tight bg-on-surface px-6 py-2 border-4 border-on-surface inline-block shadow-kinetic-sm">FIND YOUR SQUAD OF LEGENDARY TROLLS.</p>
+          <p className="text-2xl font-black uppercase italic tracking-widest text-surface-bg leading-tight bg-on-surface px-6 py-2 border-4 border-on-surface inline-block shadow-kinetic-sm">FIND YOUR SQUAD OF LEGENDARY FOUNDERS.</p>
         </div>
         <button 
           onClick={() => setIsCreating(true)}
@@ -321,7 +321,7 @@ export function Groups() {
                 value={newGroup.name}
                 onChange={e => setNewGroup({...newGroup, name: e.target.value})}
                 className="w-full bg-surface-bg border-8 border-on-surface p-8 text-2xl font-black uppercase italic shadow-kinetic-sm focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
-                placeholder="e.g. SAAS TROLLS NYC"
+                placeholder="e.g. SAAS FOUNDERS NYC"
               />
             </div>
             <div className="space-y-4">
@@ -378,7 +378,7 @@ export function Groups() {
                   </div>
                   <div className="flex flex-col items-end gap-4">
                     <span className="bg-secondary text-white border-4 border-on-surface px-6 py-2 font-black text-sm uppercase italic tracking-widest shadow-kinetic-thud flex items-center gap-3">
-                      <Users className="w-5 h-5 stroke-[3px]" /> {group.members?.length || 0} TROLLS
+                      <Users className="w-5 h-5 stroke-[3px]" /> {group.members?.length || 0} FOUNDERS
                     </span>
                     {(group.members?.length || 0) > 5 && (
                       <span className="bg-primary text-black border-4 border-on-surface px-6 py-2 font-black text-xs uppercase italic tracking-widest shadow-kinetic-thud flex items-center gap-2">
@@ -386,7 +386,7 @@ export function Groups() {
                       </span>
                     )}
                     {group.creatorId === user?.uid && (
-                      <span className="bg-primary text-black border-4 border-on-surface px-6 py-2 font-black text-xs uppercase italic tracking-widest shadow-kinetic-thud">CHIEF TROLL</span>
+                      <span className="bg-primary text-black border-4 border-on-surface px-6 py-2 font-black text-xs uppercase italic tracking-widest shadow-kinetic-thud">CHIEF FOUNDER</span>
                     )}
                   </div>
                 </div>
@@ -524,7 +524,7 @@ export function Groups() {
                           <button
                             onClick={() => handleRemoveMember(group.id, memberId)}
                             className="p-4 border-4 border-on-surface bg-surface-bg hover:bg-secondary transition-all shadow-kinetic-thud active:shadow-none active:translate-x-1 active:translate-y-1"
-                            title="Banish Troll"
+                            title="Remove Member"
                           >
                             <X className="w-8 h-8 stroke-[3px] text-on-surface" />
                           </button>
@@ -635,7 +635,7 @@ export function Groups() {
                       value={newEvent.description}
                       onChange={e => setNewEvent({...newEvent, description: e.target.value})}
                       className="w-full bg-surface-bg border-8 border-on-surface p-8 text-2xl font-black uppercase italic shadow-kinetic-sm focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all min-h-[180px] resize-none"
-                      placeholder="What's the plan, troll?"
+                      placeholder="What's the plan, founder?"
                     />
                   </div>
                   <div className="flex justify-end gap-8 pt-12 border-t-[12px] border-on-surface">

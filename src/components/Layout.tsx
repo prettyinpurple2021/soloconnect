@@ -64,17 +64,17 @@ export function Layout() {
   };
 
   const apps = [
-    { id: 'connect', name: 'SOLOCONNECT', icon: Users, color: 'bg-neon-pink', description: 'Troll Town Social' },
+    { id: 'connect', name: 'SOLOCONNECT', icon: Users, color: 'bg-neon-pink', description: 'Solo Founder Social' },
     { id: 'scribe', name: 'SCRIBBLE-BOT', icon: FileText, color: 'bg-neon-green', description: 'AI Brain Dumps' },
     { id: 'ai', name: 'BRAIN-BLAST', icon: Cpu, color: 'bg-neon-blue', description: 'Cyber-Squad' },
     { id: 'academy', name: 'SKILL-UP', icon: GraduationCap, color: 'bg-neon-yellow', description: 'Level Up Your Biz' },
-    { id: 'factory', name: 'HYPE-LAB', icon: Factory, color: 'bg-troll-orange', description: 'Viral Machine' },
+    { id: 'factory', name: 'HYPE-LAB', icon: Factory, color: 'bg-accent', description: 'Viral Machine' },
   ];
 
   const navItemsByApp: Record<AppType, any[]> = {
     connect: [
       { icon: Home, label: 'The Feed', path: '/' },
-      { icon: Users, label: 'Troll Tribes', path: '/groups' },
+      { icon: Users, label: 'Founder Tribes', path: '/groups' },
       { icon: Calendar, label: 'Raves', path: '/events' },
       { icon: Target, label: 'Quests', path: '/challenges' },
       { icon: Trophy, label: 'Hall of Fame', path: '/success-stories' },

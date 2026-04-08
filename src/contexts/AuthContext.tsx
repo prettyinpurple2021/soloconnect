@@ -14,6 +14,7 @@ export interface UserProfileData {
   links: { [key: string]: string };
   portfolio: any[];
   connections: string[];
+  savedPosts?: string[];
   blockedUsers?: string[];
   createdAt: any;
   updatedAt: any;
@@ -59,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               links: {},
               portfolio: [],
               connections: [],
+              savedPosts: [],
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
