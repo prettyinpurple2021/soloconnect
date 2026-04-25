@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ConfirmModal } from './ConfirmModal';
 import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
+import { logActivity } from '../lib/activities';
 
 interface Comment {
   id: string;
@@ -126,6 +127,18 @@ export function PostComments({ postId, postAuthorId }: PostCommentsProps) {
       if (!parentId) {
         setNewComment('');
       }
+
+      // Log activity
+      await logActivity({
+        userId: user.uid,
+        type: 'comment_post',
+        targetId: postId,
+        targetName: 'a transmission',
+        metadata: {
+          commentSnippet: contentToSubmit.slice(0, 50) + (contentToSubmit.length > 50 ? '...' : '')
+        }
+      });
+
       toast.success('Comment posted!');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'comments');
@@ -215,11 +228,13 @@ export function PostComments({ postId, postAuthorId }: PostCommentsProps) {
 
     return (
       <div className={`flex gap-3 ${depth > 0 ? 'mt-3' : 'mt-4'}`}>
+      <Link to={`/profile/${comment.authorId}`} className="w-10 h-10 border-[4px] border-on-surface shrink-0 shadow-kinetic-sm block hover:scale-105 transition-transform overflow-hidden">
         <img 
           src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${comment.authorName}`} 
           alt={comment.authorName} 
-          className="w-10 h-10 border-[4px] border-on-surface object-cover shrink-0 shadow-kinetic-sm"
+          className="w-full h-full object-cover"
         />
+      </Link>
         <div className="flex-1 min-w-0">
           <div className="bg-surface-bg border-[6px] border-on-surface p-4 inline-block min-w-[240px] max-w-full relative group shadow-kinetic-sm">
             <div className="flex items-start justify-between gap-4">
@@ -244,8 +259,8 @@ export function PostComments({ postId, postAuthorId }: PostCommentsProps) {
                           setShowOptions(false);
                           setConfirmModal({
                             isOpen: true,
-                            title: 'DELETE_COMMENT',
-                            message: 'ARE_YOU_SURE_YOU_WANT_TO_WIPE_THIS_DATA_STREAM_FROM_THE_FEED?',
+                            title: 'PURGE_COMMENT',
+                            message: 'ARE_YOU_SURE_YOU_WANT_TO_WIPE_THIS_INTEL_FROM_THE_THREAD?_THIS_ACTION_IS_IRREVERSIBLE!',
                             onConfirm: handleDeleteComment
                           });
                         }}

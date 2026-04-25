@@ -2,22 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { logOut, db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
-import { Home, User, Users, Calendar, LogOut, Briefcase, Bell, MessageSquare, CheckSquare, Trophy, GraduationCap, Cpu, Target, LayoutGrid, FileText, Factory, Sparkles, ChevronDown, Zap, Star, Ghost } from 'lucide-react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { Home, User, Users, Calendar, LogOut, Briefcase, Bell, MessageSquare, CheckSquare, Trophy, Target, Sparkles, Search, Activity } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
-
-type AppType = 'connect' | 'scribe' | 'ai' | 'academy' | 'factory';
+import { OnboardingTour } from './OnboardingTour';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Layout() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
-  const [currentApp, setCurrentApp] = useState<AppType>('connect');
-  const [isAppSwitcherOpen, setIsAppSwitcherOpen] = useState(false);
+  const [pendingConnectionsCount, setPendingConnectionsCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const [userLevel, setUserLevel] = useState(1);
   const [userPoints, setUserPoints] = useState(150);
+  const { userProfile } = useAuth();
+
+  useEffect(() => {
+    if (userProfile?.pendingConnections) {
+      setPendingConnectionsCount(userProfile.pendingConnections.length);
+    } else {
+      setPendingConnectionsCount(0);
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     if (!user) return;
@@ -63,163 +72,124 @@ export function Layout() {
     navigate('/login');
   };
 
-  const apps = [
-    { id: 'connect', name: 'SOLOCONNECT', icon: Users, color: 'bg-neon-pink', description: 'Solo Founder Social' },
-    { id: 'scribe', name: 'SCRIBBLE-BOT', icon: FileText, color: 'bg-neon-green', description: 'AI Brain Dumps' },
-    { id: 'ai', name: 'BRAIN-BLAST', icon: Cpu, color: 'bg-neon-blue', description: 'Cyber-Squad' },
-    { id: 'academy', name: 'SKILL-UP', icon: GraduationCap, color: 'bg-neon-yellow', description: 'Level Up Your Biz' },
-    { id: 'factory', name: 'HYPE-LAB', icon: Factory, color: 'bg-accent', description: 'Viral Machine' },
-  ];
-
-  const navItemsByApp: Record<AppType, any[]> = {
-    connect: [
-      { icon: Home, label: 'The Feed', path: '/' },
-      { icon: Users, label: 'Founder Tribes', path: '/groups' },
-      { icon: Calendar, label: 'Raves', path: '/events' },
-      { icon: Target, label: 'Quests', path: '/challenges' },
-      { icon: Trophy, label: 'Hall of Fame', path: '/success-stories' },
-      { icon: MessageSquare, label: 'DMs', path: '/messages', badge: unreadMessagesCount },
-      { icon: Bell, label: 'Pings', path: '/notifications', badge: unreadCount },
-    ],
-    scribe: [
-      { icon: FileText, label: 'My Scrolls', path: '/soloscribe' },
-      { icon: Sparkles, label: 'Magic Wand', path: '/soloscribe' },
-      { icon: Target, label: 'Quests', path: '/challenges' },
-    ],
-    ai: [
-      { icon: Cpu, label: 'Cyber-Agents', path: '/solosuccess-ai' },
-      { icon: Target, label: 'The Market', path: '/agent-marketplace' },
-    ],
-    academy: [
-      { icon: GraduationCap, label: 'Skill Hub', path: '/academy' },
-      { icon: Users, label: 'Study Squads', path: '/academy-groups' },
-      { icon: Trophy, label: 'Quests', path: '/challenges' },
-    ],
-    factory: [
-      { icon: Factory, label: 'Hype Lab', path: '/content-factory' },
-      { icon: Calendar, label: 'Hype Calendar', path: '/content-factory' },
-    ]
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
   };
+
+  const navItems = [
+    { icon: Home, label: 'The Feed', path: '/' },
+    { icon: Sparkles, label: 'Founder Match', path: '/founder-match' },
+    { icon: Users, label: 'Founder Communities', path: '/groups' },
+    { icon: Calendar, label: 'Raves', path: '/events' },
+    { icon: MessageSquare, label: 'DMs', path: '/messages', badge: unreadMessagesCount },
+    { icon: Bell, label: 'Pings', path: '/notifications', badge: unreadCount },
+  ];
 
   const commonNavItems = [
     { icon: Briefcase, label: 'My Stash', path: `/profile/${user?.uid}` },
+    { icon: Users, label: 'Network', path: '/connections', badge: pendingConnectionsCount },
     { icon: CheckSquare, label: 'My Timeline', path: '/my-calendar' },
   ];
 
-  const currentNavItems = navItemsByApp[currentApp];
-  const activeApp = apps.find(a => a.id === currentApp)!;
-
   return (
-    <div className="min-h-screen bg-surface-bg flex flex-col font-sans relative overflow-hidden">
-      <div className="crt-scanline" />
+    <div className="min-h-screen flex flex-col font-sans relative">
+      <div className="noise-overlay" aria-hidden="true" />
+      <OnboardingTour />
       
-      {/* Terminal Navigation */}
-      <header className="terminal-nav">
+      {/* Iridescent Background Container */}
+      <div className="fixed inset-0 liquid-iridescent-bg pointer-events-none z-0" />
+      
+      {/* Glass Header */}
+      <header className="glass-panel sticky top-0 z-50 h-16 flex items-center px-6 border-b-2 border-outline/15">
         <div className="flex items-center gap-8 h-full">
-          <div className="text-2xl font-black text-black uppercase italic tracking-[-2px] mr-4">
+          <div className="text-2xl font-headline font-black text-on-surface uppercase italic tracking-[-0.02em] mr-4">
             SOLOCONNECT
           </div>
           <nav className="flex h-full">
-            {navItemsByApp[currentApp].slice(0, 4).map((item) => (
+            {navItems.slice(0, 4).map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) => cn(
-                  "terminal-link",
-                  isActive ? "bg-black text-secondary" : "text-black"
+                  "h-full flex items-center px-4 font-bold uppercase tracking-tight transition-all relative group",
+                  isActive ? "text-on-surface" : "text-on-surface-variant hover:text-on-surface"
                 )}
               >
-                {item.label}
+                {({ isActive }) => (
+                  <>
+                    {item.label}
+                    {isActive && (
+                      <motion.div 
+                        layoutId="nav-active"
+                        className="absolute bottom-0 left-0 w-full h-1 liquid-gradient"
+                      />
+                    )}
+                  </>
+                )}
               </NavLink>
             ))}
           </nav>
         </div>
-        <div className="ml-auto flex items-center gap-4">
-          <div className="font-mono text-[10px] text-black uppercase tracking-widest hidden md:block">
+        <div className="ml-auto flex items-center gap-6">
+          <form onSubmit={handleSearch} className="relative hidden lg:block">
+            <input 
+              type="text"
+              placeholder="SCAN_THE_VOID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-surface-container-lowest border-2 border-outline/15 px-4 py-1.5 pl-10 text-[10px] font-bold uppercase italic shadow-brutal focus:shadow-brutal-lg focus:border-primary transition-all outline-none w-64"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+          </form>
+          <div className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest hidden xl:block">
             SYS_STATUS: OPTIMAL // NODE: {user?.uid.slice(0, 8)}
           </div>
+          <ThemeToggle />
           <button
             onClick={handleLogout}
-            className="px-4 py-2 bg-black text-secondary font-bold uppercase text-xs border-2 border-black hover:bg-secondary hover:text-black transition-colors"
+            className="liquid-btn text-xs px-4 py-2"
           >
             [DISCONNECT]
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 relative z-10">
         {/* Sidebar */}
-        <aside className="w-72 sticky top-16 h-[calc(100vh-64px)] bg-surface-bg border-r-[6px] border-on-surface flex flex-col z-20 overflow-hidden">
-          <div className="p-6 border-b-[6px] border-on-surface">
-            <div className="relative">
-              <button 
-                onClick={() => setIsAppSwitcherOpen(!isAppSwitcherOpen)}
-                className="w-full flex items-center justify-between p-4 bg-surface-bg border-[6px] border-on-surface shadow-kinetic hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={cn("w-10 h-10 border-4 border-black flex items-center justify-center text-black", activeApp.color)}>
-                    <activeApp.icon className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-on-surface uppercase italic leading-none tracking-tight">{activeApp.name}</p>
-                  </div>
-                </div>
-                <ChevronDown className={cn("w-5 h-5 text-on-surface transition-transform", isAppSwitcherOpen && "rotate-180")} />
-              </button>
-
-              <AnimatePresence>
-                {isAppSwitcherOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-full left-0 right-0 mt-4 bg-surface-container border-[6px] border-on-surface shadow-kinetic-active z-30"
-                  >
-                    <div className="p-2 space-y-2">
-                      {apps.map((app) => (
-                        <button
-                          key={app.id}
-                          onClick={() => {
-                            setCurrentApp(app.id as AppType);
-                            setIsAppSwitcherOpen(false);
-                            navigate(navItemsByApp[app.id as AppType][0].path);
-                          }}
-                          className={cn(
-                            "w-full flex items-center gap-3 p-3 border-4 border-transparent transition-all text-left",
-                            currentApp === app.id ? "bg-secondary text-black" : "text-on-surface hover:bg-primary hover:text-black"
-                          )}
-                        >
-                          <div className={cn("w-8 h-8 border-2 border-black flex items-center justify-center text-black", app.color)}>
-                            <app.icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black uppercase italic leading-none">{app.name}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        <aside className="w-72 sticky top-16 h-[calc(100vh-64px)] bg-surface-container-low/40 backdrop-blur-xl border-r-2 border-outline/15 flex flex-col z-20 overflow-hidden">
+          <div className="p-6">
+            <div className="flex items-center gap-3 p-4 bg-surface-container-lowest border-2 border-outline/15 shadow-brutal relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full liquid-gradient" />
+              <div className="w-10 h-10 liquid-gradient flex items-center justify-center border-2 border-on-surface rotate-3 group-hover:rotate-6 transition-transform">
+                <Users className="w-6 h-6 text-on-surface" />
+              </div>
+              <div className="text-left">
+                <p className="text-[10px] font-headline font-black text-on-surface uppercase italic leading-none tracking-tight">SOLOCONNECT</p>
+                <p className="text-[8px] font-bold text-on-surface-variant uppercase italic mt-1">FOUNDER_SOCIAL</p>
+              </div>
             </div>
           </div>
 
-          <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto custom-scrollbar">
-            <div className="space-y-2">
-              <p className="px-3 text-[10px] font-mono text-primary uppercase tracking-widest mb-4">
-                // {activeApp.name}_ZONE
+          <nav className="flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
+            <div className="space-y-4">
+              <p className="px-3 text-[10px] font-mono text-tertiary uppercase tracking-widest">
+                // CONNECT_ZONE
               </p>
               <div className="space-y-2">
-                {navItemsByApp[currentApp].map((item) => (
+                {navItems.map((item) => (
                   <NavLink
                     key={item.path}
                     to={item.path}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center justify-between px-4 py-3 border-[4px] border-transparent font-bold text-xs uppercase italic tracking-tight transition-all",
+                        "flex items-center justify-between px-4 py-3 border-2 border-transparent font-bold text-xs uppercase italic tracking-tight transition-all",
                         isActive 
-                          ? "bg-primary text-black border-black shadow-kinetic-sm translate-x-1 translate-y-1" 
-                          : "text-on-surface hover:bg-secondary hover:text-black hover:border-black"
+                          ? "chip-pill-active border-on-surface" 
+                          : "text-on-surface-variant hover:bg-surface-container-lowest hover:text-on-surface hover:border-outline/15 hover:shadow-brutal"
                       )
                     }
                   >
@@ -228,7 +198,7 @@ export function Layout() {
                       {item.label}
                     </div>
                     {item.badge ? (
-                      <span className="bg-black text-secondary text-[10px] font-bold px-2 py-0.5 border-2 border-secondary">
+                      <span className="bg-on-surface text-surface text-[10px] font-bold px-2 py-0.5 border-2 border-on-surface">
                         {item.badge}
                       </span>
                     ) : null}
@@ -237,8 +207,8 @@ export function Layout() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="px-3 text-[10px] font-mono text-accent uppercase tracking-widest mb-4">
+            <div className="space-y-4">
+              <p className="px-3 text-[10px] font-mono text-secondary uppercase tracking-widest">
                 // USER_PROTOCOL
               </p>
               <div className="space-y-2">
@@ -248,10 +218,10 @@ export function Layout() {
                     to={item.path}
                     className={({ isActive }) =>
                       cn(
-                        "flex items-center justify-between px-4 py-3 border-[4px] border-transparent font-bold text-xs uppercase italic tracking-tight transition-all",
+                        "flex items-center justify-between px-4 py-3 border-2 border-transparent font-bold text-xs uppercase italic tracking-tight transition-all",
                         isActive 
-                          ? "bg-accent text-black border-black shadow-kinetic-sm translate-x-1 translate-y-1" 
-                          : "text-on-surface hover:bg-accent hover:text-black hover:border-black"
+                          ? "bg-secondary text-on-surface border-on-surface shadow-brutal" 
+                          : "text-on-surface-variant hover:bg-surface-container-lowest hover:text-on-surface hover:border-outline/15 hover:shadow-brutal"
                       )
                     }
                   >
@@ -265,8 +235,8 @@ export function Layout() {
             </div>
           </nav>
 
-          <div className="p-6 border-t-[6px] border-on-surface">
-            <div className="flex items-center gap-3 p-3 bg-surface-container border-4 border-on-surface shadow-kinetic-sm mb-4">
+          <div className="p-6 bg-surface-container-lowest border-t-2 border-outline/15">
+            <div className="flex items-center gap-3 p-3 bg-surface-container-low border-2 border-outline/15 shadow-brutal mb-4">
               <img 
                 src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}&background=random`} 
                 alt={user?.displayName || 'User'} 
@@ -274,14 +244,34 @@ export function Layout() {
               />
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold text-on-surface truncate uppercase tracking-tight">{user?.displayName}</p>
-                <p className="text-[8px] text-primary font-mono uppercase tracking-widest">LVL {userLevel} // {userPoints} XP</p>
+                <p className="text-[8px] text-tertiary font-mono uppercase tracking-widest">LVL {userLevel} // {userPoints} XP</p>
               </div>
             </div>
+            <button 
+              onClick={() => {
+                const feedback = prompt("TRANSMIT_FEEDBACK_TO_THE_VOID:");
+                if (feedback) {
+                  import('../lib/firebase').then(({ db }) => {
+                    import('firebase/firestore').then(({ collection, addDoc, serverTimestamp }) => {
+                      addDoc(collection(db, 'feedback'), {
+                        userId: user?.uid,
+                        userEmail: user?.email,
+                        content: feedback,
+                        createdAt: serverTimestamp()
+                      }).then(() => alert("FEEDBACK_RECEIVED_FOUNDER."));
+                    });
+                  });
+                }
+              }}
+              className="w-full py-2 bg-surface-container-low text-on-surface font-black uppercase text-[10px] italic border-2 border-on-surface shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all"
+            >
+              REPORT_GLITCH
+            </button>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-h-screen bg-surface-bg">
+        <main className="flex-1 min-h-screen">
           <div className="max-w-5xl mx-auto w-full py-12 px-12">
             <Outlet />
           </div>

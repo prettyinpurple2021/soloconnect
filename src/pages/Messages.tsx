@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, limit, increment } from 'firebase/firestore';
@@ -34,6 +35,9 @@ interface UserProfile {
 
 export function Messages() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetUserId = searchParams.get('chat');
+  
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -56,12 +60,19 @@ export function Messages() {
 
     const q = query(
       collection(db, 'chats'),
-      where('participants', 'array-contains', user.uid),
-      orderBy('updatedAt', 'desc')
+      where('participants', 'array-contains', user.uid)
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const chatList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
+      let chatList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
+      
+      // Sort client-side to avoid composite index requirement
+      chatList.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis?.() || 0;
+        const timeB = b.updatedAt?.toMillis?.() || 0;
+        return timeB - timeA;
+      });
+
       setChats(chatList);
       setLoading(false);
 
@@ -91,8 +102,46 @@ export function Messages() {
     return () => unsubscribe();
   }, [user]);
 
+  // Handle targetUserId from query params
   useEffect(() => {
-    if (!selectedChat) {
+    if (!user || !targetUserId || !chats.length) return;
+
+    const existingChat = chats.find(chat => 
+      chat.participants.includes(targetUserId) && chat.participants.length === 2
+    );
+
+    if (existingChat) {
+      setSelectedChat(existingChat);
+      // Clear the search param so it doesn't keep re-selecting if the user switches away
+      setSearchParams({}, { replace: true });
+    } else {
+      // If no existing chat, we might need to fetch the user profile to show who we're chatting with
+      const fetchTargetProfile = async () => {
+        if (!userProfiles[targetUserId]) {
+          const userDoc = await getDoc(doc(db, 'users', targetUserId));
+          if (userDoc.exists()) {
+            setUserProfiles(prev => ({
+              ...prev,
+              [targetUserId]: userDoc.data() as UserProfile
+            }));
+          }
+        }
+        
+        // Create a temporary chat object for the UI
+        const tempChat: Chat = {
+          id: 'new',
+          participants: [user.uid, targetUserId],
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        };
+        setSelectedChat(tempChat);
+      };
+      fetchTargetProfile();
+    }
+  }, [targetUserId, chats, user, setSearchParams]);
+
+  useEffect(() => {
+    if (!selectedChat || selectedChat.id === 'new') {
       setMessages([]);
       return;
     }
@@ -140,26 +189,57 @@ export function Messages() {
     setNewMessage('');
 
     try {
+      let chatId = selectedChat.id;
+
+      if (chatId === 'new') {
+        // Create new chat document
+        const chatData = {
+          participants: selectedChat.participants,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastMessage: messageContent,
+          lastMessageAt: serverTimestamp(),
+          unreadCount: {
+            [selectedChat.participants.find(id => id !== user.uid)!]: 1,
+            [user.uid]: 0
+          }
+        };
+        const chatRef = await addDoc(collection(db, 'chats'), chatData);
+        chatId = chatRef.id;
+        
+        // Update selectedChat to the new chat (temp object until snapshot updates)
+        setSelectedChat({
+          id: chatId,
+          ...chatData,
+          lastMessageAt: { toDate: () => new Date() } // Temp for UI
+        } as any);
+      }
+
       const messageData = {
-        chatId: selectedChat.id,
+        chatId: chatId,
         senderId: user.uid,
         content: messageContent,
         createdAt: serverTimestamp(),
         read: false
       };
 
-      await addDoc(collection(db, 'chats', selectedChat.id, 'messages'), messageData);
+      await addDoc(collection(db, 'chats', chatId, 'messages'), messageData);
       
-      const otherId = selectedChat.participants.find(id => id !== user.uid);
-      
-      await updateDoc(doc(db, 'chats', selectedChat.id), {
-        lastMessage: messageContent,
-        lastMessageAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        [`unreadCount.${otherId}`]: increment(1)
-      });
+      if (selectedChat.id !== 'new') {
+        const otherId = selectedChat.participants.find(id => id !== user.uid);
+        
+        await updateDoc(doc(db, 'chats', chatId), {
+          lastMessage: messageContent,
+          lastMessageAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          [`unreadCount.${otherId}`]: increment(1)
+        });
+      } else {
+        // If it was a new chat, we should clear the search param
+        setSearchParams({}, { replace: true });
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `chats/${selectedChat.id}/messages`);
+      handleFirestoreError(error, OperationType.CREATE, `chats/${selectedChat.id === 'new' ? 'new' : selectedChat.id}/messages`);
       toast.error('Failed to send message');
     }
   };
@@ -177,11 +257,11 @@ export function Messages() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-surface-bg">
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-surface">
         <div className="relative">
-          <div className="w-24 h-24 border-[10px] border-on-surface border-t-primary rounded-none animate-spin shadow-kinetic-sm"></div>
+          <div className="w-24 h-24 border-2 border-on-surface border-t-primary animate-spin shadow-brutal"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-4 h-4 bg-secondary border-2 border-on-surface rounded-none animate-ping"></div>
+            <div className="w-4 h-4 bg-secondary border-2 border-on-surface animate-ping"></div>
           </div>
         </div>
       </div>
@@ -189,38 +269,39 @@ export function Messages() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] bg-surface-bg border-[10px] border-on-surface shadow-kinetic overflow-hidden flex relative font-sans">
+    <div className="h-[calc(100vh-8rem)] bg-surface border-2 border-outline/15 shadow-brutal overflow-hidden flex relative font-sans">
+      <div className="absolute top-0 left-0 w-full h-1 liquid-gradient z-30" />
       {/* Chat List */}
-      <div className="w-96 border-r-[10px] border-on-surface flex flex-col bg-surface-container relative z-20">
-        <div className="p-10 border-b-[10px] border-on-surface bg-surface-bg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-primary border-l-8 border-b-8 border-on-surface -rotate-12 translate-x-8 -translate-y-8"></div>
+      <div className="w-96 border-r-2 border-outline/15 flex flex-col bg-surface-container-low relative z-20">
+        <div className="p-10 border-b-2 border-outline/15 bg-surface relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-primary opacity-10 blur-2xl rounded-full" />
           
           <div className="flex items-center justify-between mb-8 relative z-10">
-            <h1 className="text-4xl font-black uppercase italic tracking-tighter text-on-surface drop-shadow-[4px_4px_0px_#00ffff]">Founder Talk</h1>
+            <h1 className="text-4xl font-headline font-black uppercase italic tracking-tighter text-on-surface">Founder_Talk</h1>
             <button 
-              className="bg-on-surface text-surface-bg p-3 border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all active:bg-secondary"
+              className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:bg-secondary hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all"
               onClick={() => toast.success('Search for a founder on their profile to start a chat!')}
             >
-              <Send className="w-6 h-6 stroke-[3px]" />
+              <Send className="w-6 h-6 stroke-[3px] text-on-surface" />
             </button>
           </div>
           <div className="relative z-10">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-on-surface stroke-[3px]" />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-on-surface-variant stroke-[3px]" />
             <input 
               type="text" 
-              placeholder="SEARCH ECHOES..."
+              placeholder="SEARCH_ECHOES..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-surface-bg border-8 border-on-surface py-4 pl-16 pr-6 text-sm uppercase font-black italic tracking-widest shadow-kinetic-thud focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all placeholder:text-on-surface/30"
+              className="w-full bg-surface-container-lowest border-2 border-on-surface py-4 pl-16 pr-6 text-sm uppercase font-black italic tracking-widest shadow-brutal focus:outline-none transition-all placeholder:text-on-surface-variant/20"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-surface-container">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-surface-container-low">
           {filteredChats.length === 0 ? (
-            <div className="p-16 text-center bg-surface-bg border-4 border-dashed border-on-surface shadow-kinetic-sm">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-on-surface/40 italic">
-                {searchTerm ? 'NO ECHOES FOUND.' : 'NO ECHOES YET.'}
+            <div className="p-16 text-center bg-surface-container-lowest border-2 border-dashed border-outline/15 shadow-brutal">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant italic">
+                {searchTerm ? 'NO_ECHOES_FOUND.' : 'NO_ECHOES_YET.'}
               </p>
             </div>
           ) : (
@@ -233,28 +314,28 @@ export function Messages() {
                   key={chat.id}
                   onClick={() => setSelectedChat(chat)}
                   className={cn(
-                    "w-full border-8 border-on-surface p-5 flex items-center gap-5 transition-all text-left group relative",
+                    "w-full border-2 border-on-surface p-5 flex items-center gap-5 transition-all text-left group relative",
                     isActive 
                       ? "bg-primary shadow-none translate-x-1 translate-y-1" 
-                      : "bg-surface-bg shadow-kinetic-sm hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+                      : "bg-surface shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5"
                   )}
                 >
                   <div className="relative shrink-0">
-                    <div className="w-16 h-16 border-4 border-on-surface shadow-kinetic-thud overflow-hidden group-hover:-rotate-6 transition-transform">
+                    <div className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden group-hover:-rotate-6 transition-transform">
                       <img 
                         src={otherUser?.photoURL || `https://ui-avatars.com/api/?name=${otherUser?.displayName || 'User'}&background=random`} 
                         alt={otherUser?.displayName || 'User'} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
                         referrerPolicy="no-referrer"
                       />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-4 border-on-surface rounded-none shadow-kinetic-thud"></div>
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-2 border-on-surface shadow-brutal"></div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
                       <p className="text-base font-black uppercase italic tracking-tight text-on-surface truncate">{otherUser?.displayName || 'LOADING...'}</p>
                       {chat.lastMessageAt && (
-                        <span className="text-[8px] text-on-surface/40 uppercase font-black tracking-widest italic">
+                        <span className="text-[8px] text-on-surface-variant uppercase font-black tracking-widest italic">
                           {formatDistanceToNow(chat.lastMessageAt.toDate(), { addSuffix: false })}
                         </span>
                       )}
@@ -262,12 +343,12 @@ export function Messages() {
                     <div className="flex justify-between items-center gap-2">
                       <p className={cn(
                         "text-[10px] truncate flex-1 font-black italic tracking-tight",
-                        chat.unreadCount?.[user?.uid || ''] ? "text-on-surface" : "text-on-surface/40"
+                        chat.unreadCount?.[user?.uid || ''] ? "text-on-surface" : "text-on-surface-variant"
                       )}>
                         {chat.lastMessage || 'No echoes yet'}
                       </p>
                       {chat.unreadCount?.[user?.uid || ''] ? (
-                        <span className="w-4 h-4 bg-secondary border-4 border-on-surface rounded-none flex-shrink-0 animate-pulse shadow-kinetic-thud"></span>
+                        <span className="w-4 h-4 bg-secondary border-2 border-on-surface animate-pulse shadow-brutal"></span>
                       ) : null}
                     </div>
                   </div>
@@ -279,43 +360,47 @@ export function Messages() {
       </div>
 
       {/* Chat Window */}
-      <div className="flex-1 flex flex-col bg-surface-bg relative">
+      <div className="flex-1 flex flex-col bg-surface relative">
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-8 bg-surface-bg border-b-[10px] border-on-surface flex items-center justify-between relative z-10">
+            <div className="p-8 bg-surface border-b-2 border-outline/15 flex items-center justify-between relative z-10">
               <div className="flex items-center gap-6">
                 <div className="relative">
-                  <div className="w-16 h-16 border-4 border-on-surface shadow-kinetic-thud overflow-hidden -rotate-3">
+                  <div className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden -rotate-3">
                     <img 
                       src={getOtherParticipant(selectedChat)?.photoURL || `https://ui-avatars.com/api/?name=${getOtherParticipant(selectedChat)?.displayName || 'User'}&background=random`} 
                       alt={getOtherParticipant(selectedChat)?.displayName || 'User'} 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover grayscale"
                       referrerPolicy="no-referrer"
                     />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-4 border-on-surface rounded-none shadow-kinetic-thud"></div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-2 border-on-surface shadow-brutal"></div>
                 </div>
                 <div>
-                  <p className="text-3xl font-black uppercase italic tracking-tighter text-on-surface drop-shadow-[2px_2px_0px_#00ffff]">{getOtherParticipant(selectedChat)?.displayName || 'LOADING...'}</p>
-                  <p className="text-xs text-accent font-black uppercase tracking-[0.2em] italic">Online & Active</p>
+                  <p className="text-3xl font-headline font-black uppercase italic tracking-tighter text-on-surface">{getOtherParticipant(selectedChat)?.displayName || 'LOADING...'}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+                    <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.2em] italic">ACTIVE_PROTOCOL</p>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                <button className="bg-surface-bg border-4 border-on-surface p-3 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-primary">
+                <button className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all hover:bg-primary">
                   <Phone className="w-6 h-6 stroke-[3px]" />
                 </button>
-                <button className="bg-surface-bg border-4 border-on-surface p-3 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-accent">
+                <button className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all hover:bg-accent">
                   <Video className="w-6 h-6 stroke-[3px]" />
                 </button>
-                <button className="bg-surface-bg border-4 border-on-surface p-3 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-secondary">
+                <button className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all hover:bg-secondary">
                   <MoreVertical className="w-6 h-6 stroke-[3px]" />
                 </button>
               </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-10 space-y-10 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px_20px] [background-position:center]">
+            <div className="flex-1 overflow-y-auto p-10 space-y-10 bg-surface-container-lowest relative">
+              <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
               {messages.map((msg, idx) => {
                 const isMe = msg.senderId === user?.uid;
                 const showAvatar = idx === 0 || messages[idx - 1].senderId !== msg.senderId;
@@ -324,18 +409,18 @@ export function Messages() {
                   <div 
                     key={msg.id} 
                     className={cn(
-                      "flex items-end gap-5",
+                      "flex items-end gap-5 relative z-10",
                       isMe ? "flex-row-reverse" : "flex-row"
                     )}
                   >
                     {!isMe && (
                       <div className="w-12 h-12 shrink-0">
                         {showAvatar && (
-                          <div className="w-12 h-12 border-4 border-on-surface shadow-kinetic-thud overflow-hidden rotate-3">
+                          <div className="w-12 h-12 border-2 border-on-surface shadow-brutal overflow-hidden rotate-3">
                             <img 
                               src={getOtherParticipant(selectedChat)?.photoURL || `https://ui-avatars.com/api/?name=${getOtherParticipant(selectedChat)?.displayName || 'User'}&background=random`} 
                               alt="Avatar" 
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover grayscale"
                               referrerPolicy="no-referrer"
                             />
                           </div>
@@ -343,17 +428,17 @@ export function Messages() {
                       </div>
                     )}
                     <div className={cn(
-                      "max-w-[70%] p-6 border-4 border-on-surface shadow-kinetic-sm text-base font-black italic tracking-tight relative",
+                      "max-w-[70%] p-6 border-2 border-on-surface shadow-brutal text-base font-black italic tracking-tight relative",
                       isMe 
-                        ? "bg-primary text-black rounded-none" 
-                        : "bg-surface-container text-on-surface rounded-none"
+                        ? "bg-primary text-black" 
+                        : "bg-surface-container-low text-on-surface"
                     )}>
-                      <p className="leading-tight">"{msg.content}"</p>
+                      <p className="leading-tight uppercase">"{msg.content}"</p>
                       <p className={cn(
-                        "text-[8px] mt-3 font-black uppercase tracking-widest text-on-surface/40 italic",
+                        "text-[8px] mt-3 font-black uppercase tracking-widest text-on-surface-variant italic",
                         isMe ? "text-right" : "text-left"
                       )}>
-                        {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true }) : 'SENDING...'}
+                        {msg.createdAt ? formatDistanceToNow(msg.createdAt.toDate(), { addSuffix: true }) : 'SYNCING...'}
                       </p>
                     </div>
                   </div>
@@ -363,9 +448,9 @@ export function Messages() {
             </div>
 
             {/* Input Area */}
-            <div className="p-10 bg-surface-bg border-t-[10px] border-on-surface relative z-10">
+            <div className="p-10 bg-surface border-t-2 border-outline/15 relative z-10">
               <form onSubmit={handleSendMessage} className="flex items-center gap-6">
-                <button type="button" className="bg-surface-bg border-4 border-on-surface p-4 shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all hover:bg-secondary">
+                <button type="button" className="bg-surface border-2 border-on-surface p-4 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all hover:bg-secondary">
                   <Paperclip className="w-8 h-8 stroke-[3px]" />
                 </button>
                 <div className="flex-1 relative">
@@ -373,17 +458,17 @@ export function Messages() {
                     type="text" 
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="TYPE AN ECHO..."
-                    className="w-full bg-surface-bg border-8 border-on-surface py-5 px-8 pr-20 text-lg font-black uppercase italic tracking-widest shadow-kinetic-thud focus:outline-none focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all placeholder:text-on-surface/30"
+                    placeholder="TYPE_AN_ECHO..."
+                    className="w-full bg-surface-container-lowest border-2 border-on-surface py-5 px-8 pr-20 text-lg font-black uppercase italic tracking-widest shadow-brutal focus:outline-none transition-all placeholder:text-on-surface-variant/20"
                   />
-                  <button type="button" className="absolute right-6 top-1/2 -translate-y-1/2 text-on-surface hover:text-secondary transition-all hover:scale-125">
+                  <button type="button" className="absolute right-6 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-secondary transition-all hover:scale-125">
                     <Smile className="w-8 h-8 stroke-[3px]" />
                   </button>
                 </div>
                 <button 
                   type="submit"
                   disabled={!newMessage.trim()}
-                  className="bg-on-surface text-surface-bg p-5 border-4 border-on-surface shadow-kinetic-thud hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:bg-accent"
+                  className="bg-on-surface text-surface p-5 border-2 border-on-surface shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:bg-accent"
                 >
                   <Send className="w-8 h-8 stroke-[3px]" />
                 </button>
@@ -391,14 +476,15 @@ export function Messages() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:30px_30px]">
-            <div className="w-32 h-32 bg-secondary border-8 border-on-surface shadow-kinetic flex items-center justify-center mb-12 rotate-6 hover:rotate-0 transition-transform">
-              <Send className="w-16 h-16 text-black -rotate-12 stroke-[3px]" />
+          <div className="flex-1 flex flex-col items-center justify-center p-20 text-center relative overflow-hidden bg-surface-container-lowest">
+            <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+            <div className="w-32 h-32 bg-secondary border-2 border-on-surface shadow-brutal flex items-center justify-center mb-12 rotate-6 hover:rotate-0 transition-transform relative z-10">
+              <Send className="w-16 h-16 text-on-secondary -rotate-12 stroke-[3px]" />
             </div>
-            <h2 className="text-5xl font-black uppercase italic tracking-tighter text-on-surface mb-6 drop-shadow-[6px_6px_0px_#ff00ff]">Your Echoes</h2>
-            <div className="bg-surface-container border-4 border-on-surface p-6 shadow-kinetic-sm -rotate-1">
-              <p className="text-on-surface font-black italic text-xl tracking-tight">
-                "Select a conversation from the left to start chatting with other solo founders."
+            <h2 className="text-5xl font-headline font-black uppercase italic tracking-tighter text-on-surface mb-6 relative z-10">YOUR_ECHOES</h2>
+            <div className="bg-surface-container-low border-2 border-on-surface p-6 shadow-brutal -rotate-1 relative z-10">
+              <p className="text-on-surface font-black italic text-xl tracking-tight uppercase">
+                "SELECT_A_CONVERSATION_TO_INITIATE_LINK."
               </p>
             </div>
           </div>

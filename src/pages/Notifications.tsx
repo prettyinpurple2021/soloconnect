@@ -131,7 +131,7 @@ export function Notifications() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-12 gap-6">
         <div>
           <h1 className="text-5xl font-black text-on-surface mb-2 uppercase italic tracking-tighter drop-shadow-[4px_4px_0px_#00ffff]">THE ECHOES</h1>
-          <p className="text-black font-bold uppercase italic text-sm tracking-widest bg-accent px-3 py-1 inline-block border-2 border-on-surface shadow-kinetic-thud">STAY UPDATED WITH YOUR TRIBE.</p>
+          <p className="text-black font-bold uppercase italic text-sm tracking-widest bg-accent px-3 py-1 inline-block border-2 border-on-surface shadow-kinetic-thud">STAY UPDATED WITH YOUR COMMUNITY.</p>
         </div>
         <div className="flex items-center gap-4">
           {notifications.length > 0 && (
@@ -187,72 +187,78 @@ export function Notifications() {
         {notifications.length > 0 ? (
           <AnimatePresence>
             {notifications.map((notification) => (
-              <motion.div
-                key={notification.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                className={cn(
-                  "p-6 bg-surface-bg border-4 border-on-surface shadow-kinetic-thud flex gap-6 relative transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none cursor-pointer",
-                  !notification.read ? "bg-primary/10" : ""
-                )}
-                onClick={() => !notification.read && markAsRead(notification.id)}
-              >
-                {!notification.read && (
-                  <div className="absolute left-[-4px] top-[-4px] bottom-[-4px] w-3 bg-secondary border-r-4 border-on-surface" />
-                )}
-                
-                <div className="shrink-0 relative">
-                  <div className="w-16 h-16 border-4 border-on-surface shadow-kinetic-thud overflow-hidden">
-                    <img 
-                      src={notification.sourceUserPhoto || `https://ui-avatars.com/api/?name=${notification.sourceUserName}`}
-                      alt={notification.sourceUserName}
-                      className="w-full h-full object-cover"
-                    />
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={cn(
+                    "p-6 bg-surface-container-low border-4 border-on-surface shadow-kinetic-thud flex gap-6 relative transition-all cursor-pointer group overflow-hidden hover:rotate-1",
+                    !notification.read ? "bg-primary/5" : ""
+                  )}
+                  onClick={() => !notification.read && markAsRead(notification.id)}
+                >
+                  {/* Liquid Shimmer Background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity animate-[liquid-anim_5s_linear_infinite]" />
+                  
+                  {/* Glitch Line */}
+                  <div className="absolute inset-x-0 h-[1px] bg-white opacity-0 group-hover:opacity-30 top-1/4 animate-[glitch-anim_0.1s_infinite]" />
+                  
+                  {!notification.read && (
+                    <div className="absolute left-[-4px] top-[-4px] bottom-[-4px] w-3 bg-secondary border-r-4 border-on-surface z-10" />
+                  )}
+                  
+                  <div className="shrink-0 relative z-10">
+                    <div className="w-16 h-16 border-4 border-on-surface shadow-kinetic-thud overflow-hidden bg-surface">
+                      <img 
+                        src={notification.sourceUserPhoto || `https://ui-avatars.com/api/?name=${notification.sourceUserName}`}
+                        alt={notification.sourceUserName}
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
+                      />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 bg-surface border-2 border-on-surface p-1.5 shadow-kinetic-thud">
+                      {getIcon(notification.type)}
+                    </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 bg-surface-bg border-2 border-on-surface p-1.5 shadow-kinetic-thud">
-                    {getIcon(notification.type)}
-                  </div>
-                </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                    <p className="text-on-surface text-lg font-black uppercase italic tracking-tighter">
-                      <Link to={`/profile/${notification.sourceUserId}`} className="hover:text-secondary transition-colors drop-shadow-[1px_1px_0px_#00ffff]">
-                        {notification.sourceUserName}
-                      </Link>
+                  <div className="flex-1 min-w-0 relative z-10">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <p className="text-on-surface text-lg font-black uppercase italic tracking-tighter">
+                        <Link to={`/profile/${notification.sourceUserId}`} className="hover:text-secondary transition-colors drop-shadow-[1px_1px_0px_#00ffff]">
+                          {notification.sourceUserName}
+                        </Link>
+                      </p>
+                      <span className="text-[10px] font-black uppercase italic bg-on-surface text-surface px-2 py-0.5 tracking-widest">
+                        {notification.createdAt?.toDate ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true }) : 'JUST NOW'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-on-surface font-bold text-lg mb-4 italic leading-tight">
+                      "{notification.content}"
                     </p>
-                    <span className="text-xs font-black uppercase italic bg-on-surface text-surface-bg px-2 py-0.5">
-                      {notification.createdAt?.toDate ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true }) : 'JUST NOW'}
-                    </span>
-                  </div>
-                  
-                  <p className="text-on-surface font-bold text-lg mb-4 italic">
-                    "{notification.content}"
-                  </p>
-                  
-                  <div className="flex items-center gap-4">
-                    <Link 
-                      to={notification.link}
-                      onClick={() => !notification.read && markAsRead(notification.id)}
-                      className="inline-flex items-center justify-center px-6 py-2 text-sm font-black uppercase italic bg-accent border-2 border-on-surface text-black shadow-kinetic-thud hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
-                    >
-                      VIEW MISSION
-                    </Link>
-                    {!notification.read && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          markAsRead(notification.id);
-                        }}
-                        className="text-xs font-black uppercase italic text-on-surface/40 hover:text-on-surface transition-colors"
+                    
+                    <div className="flex items-center gap-4">
+                      <Link 
+                        to={notification.link}
+                        onClick={() => !notification.read && markAsRead(notification.id)}
+                        className="inline-flex items-center justify-center px-6 py-2 text-xs font-black uppercase italic bg-accent border-2 border-on-surface text-on-accent shadow-kinetic-thud hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
                       >
-                        MARK AS READ
-                      </button>
-                    )}
+                        VIEW MISSION
+                      </Link>
+                      {!notification.read && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(notification.id);
+                          }}
+                          className="text-[10px] font-black uppercase italic text-on-surface-variant hover:text-on-surface transition-colors"
+                        >
+                          MARK AS READ
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
             ))}
           </AnimatePresence>
         ) : (
@@ -261,7 +267,7 @@ export function Notifications() {
               <Bell className="w-12 h-12 text-black" />
             </div>
             <h3 className="text-3xl font-black text-on-surface mb-2 uppercase italic tracking-tighter drop-shadow-[2px_2px_0px_#ff00ff]">SILENCE IN THE CAVE</h3>
-            <p className="text-on-surface font-bold uppercase italic text-sm tracking-widest px-8">WHEN THE TRIBE CALLS, YOU'LL HEAR THE ECHOES HERE.</p>
+            <p className="text-on-surface font-bold uppercase italic text-sm tracking-widest px-8">WHEN THE COMMUNITY CALLS, YOU'LL HEAR THE ECHOES HERE.</p>
           </div>
         )}
       </div>

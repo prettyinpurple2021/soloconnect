@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, deleteDoc, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { toggleUserConnection } from '../lib/connections';
 import { cn } from '../lib/utils';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { toast } from 'react-hot-toast';
+import { logActivity } from '../lib/activities';
 import { PostComments } from '../components/PostComments';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { RichTextEditor } from '../components/RichTextEditor';
+import { OnboardingChecklist } from '../components/OnboardingChecklist';
+import { BentoDashboard } from '../components/BentoDashboard';
 import { generatePostContent, generateImage, analyzePulse } from '../services/geminiService';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -29,6 +32,7 @@ interface Post {
   commentCount: number;
   groupId?: string;
   createdAt: any;
+  updatedAt?: any;
 }
 
 interface Group {
@@ -43,6 +47,7 @@ const COMMON_TAGS = ['Showcase', 'Question', 'Milestone', 'Resource', 'Collabora
 
 export function Feed() {
   const { user, userProfile } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [groups, setGroups] = useState<Record<string, Group>>({});
   const [newPost, setNewPost] = useState('');
@@ -59,15 +64,30 @@ export function Feed() {
   const [filterTag, setFilterTag] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'recent' | 'liked' | 'commented'>('recent');
   const [pulseInsight, setPulseInsight] = useState<string>('Analyzing community momentum...');
+  const [displayLimit, setDisplayLimit] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const lastPostElementRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        setIsLoadingMore(true);
+        setDisplayLimit(prev => prev + 10);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [hasMore, isLoadingMore]);
 
   useEffect(() => {
     const fetchPulse = async () => {
       const stats = {
-        activeNow: 1204,
-        milestones: 42,
-        collaborations: 18,
-        velocity: '98%'
+        activeNow: 1,
+        milestones: 0,
+        collaborations: 0,
+        velocity: '0%'
       };
       const insight = await analyzePulse(stats);
       setPulseInsight(insight);
@@ -76,7 +96,11 @@ export function Feed() {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    let q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(displayLimit));
+    
+    // Note: Complex queries (where + orderBy) require indexes. 
+    // We'll stick to a simpler approach for now to ensure it works without manual index creation,
+    // but we'll use the limit for infinite scroll.
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
@@ -84,12 +108,20 @@ export function Feed() {
         ...doc.data()
       })) as Post[];
       setPosts(postsData);
+      setHasMore(snapshot.docs.length === displayLimit);
+      setIsLoadingMore(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'posts');
+      setIsLoadingMore(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [displayLimit]);
+
+  useEffect(() => {
+    // Reset limit when filters change significantly (optional, but good for UX)
+    setDisplayLimit(10);
+  }, [filterTag, sortBy]);
 
   useEffect(() => {
     const q = query(collection(db, 'groups'));
@@ -172,6 +204,15 @@ export function Feed() {
         fileInputRef.current.value = '';
       }
       toast.success('Post published successfully!', { id: toastId });
+
+      // Log activity
+      await logActivity({
+        userId: user.uid,
+        type: 'create_post',
+        targetId: '', // No specific target ID for a general post
+        targetName: 'a new transmission',
+      });
+
       confetti({
         particleCount: 100,
         spread: 70,
@@ -195,6 +236,15 @@ export function Feed() {
       await updateDoc(postRef, {
         likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
       });
+
+      if (!isLiked) {
+        await logActivity({
+          userId: user.uid,
+          type: 'like_post',
+          targetId: postId,
+          targetName: 'a transmission',
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
       toast.error('Failed to update like.');
@@ -232,16 +282,17 @@ export function Feed() {
   const handleDeletePost = async (postId: string) => {
     setConfirmModal({
       isOpen: true,
-      title: 'DELETE_POST',
-      message: 'ARE_YOU_SURE_YOU_WANT_TO_WIPE_THIS_DATA_STREAM_FROM_THE_FEED?',
+      title: 'PURGE_INTEL',
+      message: 'ARE_YOU_SURE_YOU_WANT_TO_WIPE_THIS_DATA_STREAM_FROM_THE_FEED?_THIS_ACTION_IS_IRREVERSIBLE!',
       onConfirm: async () => {
-        const toastId = toast.loading('Deleting post...');
+        const toastId = toast.loading('Purging post...');
         try {
           await deleteDoc(doc(db, 'posts', postId));
-          toast.success('Post deleted.', { id: toastId });
+          toast.success('Post purged.', { id: toastId });
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
         } catch (error) {
           handleFirestoreError(error, OperationType.DELETE, `posts/${postId}`);
-          toast.error('Failed to delete post.', { id: toastId });
+          toast.error('Failed to purge post.', { id: toastId });
         }
       }
     });
@@ -264,15 +315,29 @@ export function Feed() {
     }
   };
 
-  const handleToggleConnection = async (authorId: string) => {
+  const handleToggleConnection = async (authorId: string, state: string) => {
     if (!user) return;
-    const isConnected = userProfile?.connections?.includes(authorId);
     try {
-      await toggleUserConnection(user, authorId, !!isConnected);
-      toast.success(isConnected ? 'Connection removed.' : 'Connection request sent.');
+      if (state === 'none' || state === 'incoming') {
+        await toggleUserConnection(user, authorId, false); // Sends request
+        toast.success('Connection request sent.');
+      } else if (state === 'connected') {
+        await toggleUserConnection(user, authorId, true); // Removes request
+        toast.success('Connection removed.');
+      } else if (state === 'pending') {
+        await toggleUserConnection(user, authorId, true); // Allows un-requesting
+        toast.success('Connection request withdrawn.');
+      }
     } catch (error) {
       toast.error('Failed to update connection.');
     }
+  };
+
+  const getConnState = (authorId: string) => {
+    if (userProfile?.connections?.includes(authorId)) return 'connected';
+    if (userProfile?.sentRequests?.includes(authorId)) return 'pending';
+    if (userProfile?.pendingConnections?.includes(authorId)) return 'incoming';
+    return 'none';
   };
 
   const handleAIAssist = async () => {
@@ -380,129 +445,40 @@ export function Feed() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-16 font-sans">
-      {/* Kinetic Momentum Dashboard */}
-      <motion.div 
-        initial={{ opacity: 0, y: -40 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-secondary border-[6px] border-black p-8 lg:p-12 relative overflow-hidden shadow-kinetic"
-      >
-        <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
-          <TrendingUp className="w-32 h-32 text-black" />
-        </div>
-        
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-8">
-            <div>
-              <h2 className="text-4xl lg:text-6xl font-black flex items-center gap-4 uppercase italic text-black tracking-[-2px] leading-none">
-                PULSE_MONITOR <Activity className="w-10 h-10 text-primary" />
-              </h2>
-              <div className="mt-4 bg-surface-bg border-[4px] border-black p-4 shadow-kinetic-sm inline-block">
-                <p className="text-primary font-mono text-sm uppercase italic leading-tight">
-                  {">"} {pulseInsight}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <div className="text-5xl font-black text-black flex items-center justify-end gap-2 tracking-tighter italic">
-                  <Zap className="w-8 h-8 fill-current" /> 98%
-                </div>
-                <p className="text-black font-bold text-[10px] uppercase italic tracking-widest mt-1">MOMENTUM_STABLE</p>
-              </div>
-              <div className="bg-accent border-[6px] border-black p-3 shadow-kinetic-sm rotate-3">
-                <Trophy className="w-8 h-8 text-black" />
-              </div>
-            </div>
-          </div>
+      {/* Onboarding Checklist */}
+      <OnboardingChecklist />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            <div className="lg:col-span-2 h-40 w-full bg-surface-bg border-[6px] border-black shadow-kinetic-sm overflow-hidden">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={[
-                  { name: 'Mon', value: 40 },
-                  { name: 'Tue', value: 30 },
-                  { name: 'Wed', value: 65 },
-                  { name: 'Thu', value: 45 },
-                  { name: 'Fri', value: 90 },
-                  { name: 'Sat', value: 70 },
-                  { name: 'Sun', value: 85 },
-                ]}>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0D0D0D', border: '4px solid #E5E2E1', borderRadius: '0px', color: '#E5E2E1', fontFamily: 'monospace', fontWeight: '700' }}
-                    itemStyle={{ color: '#39FF14' }}
-                  />
-                  <Area 
-                    type="step" 
-                    dataKey="value" 
-                    stroke="#39FF14" 
-                    strokeWidth={4}
-                    fillOpacity={0.2} 
-                    fill="#39FF14" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-surface-container border-[6px] border-on-surface p-4 shadow-kinetic-sm relative overflow-hidden group">
-              <div className="absolute -right-2 -bottom-2 opacity-10 group-hover:scale-110 transition-transform">
-                <Star className="w-16 h-16 fill-current text-on-surface" />
-              </div>
-              <p className="text-[8px] font-bold uppercase italic tracking-widest mb-3 text-on-surface/60">TOP_NODE</p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 border-[4px] border-on-surface bg-accent shadow-kinetic-thud overflow-hidden">
-                  <img src="https://picsum.photos/seed/founder/100/100" alt="Top Founder" className="w-full h-full object-cover grayscale" />
-                </div>
-                <div>
-                  <p className="text-sm font-black uppercase italic tracking-tight text-on-surface leading-none">@NEON_GLOW</p>
-                  <p className="text-[8px] font-mono uppercase italic tracking-widest text-primary mt-1">LVL 42 // 1.2K XP</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-surface-bg border-[4px] border-black p-4 shadow-kinetic-sm hover:bg-black transition-all cursor-pointer group">
-              <p className="text-primary text-[8px] font-bold uppercase italic tracking-widest mb-1 group-hover:text-secondary">ACTIVE_NODES</p>
-              <p className="text-2xl font-black uppercase italic tracking-tight leading-none text-on-surface">1,204</p>
-            </div>
-            <div className="bg-surface-bg border-[4px] border-black p-4 shadow-kinetic-sm hover:bg-black transition-all cursor-pointer group">
-              <p className="text-primary text-[8px] font-bold uppercase italic tracking-widest mb-1 group-hover:text-secondary">MILESTONES</p>
-              <p className="text-2xl font-black uppercase italic tracking-tight leading-none text-on-surface">42</p>
-            </div>
-            <div className="bg-surface-bg border-[4px] border-black p-4 shadow-kinetic-sm hover:bg-black transition-all cursor-pointer group">
-              <p className="text-primary text-[8px] font-bold uppercase italic tracking-widest mb-1 group-hover:text-secondary">COLLABS</p>
-              <p className="text-2xl font-black uppercase italic tracking-tight leading-none text-on-surface">18</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      {/* Bento Kinetic Dashboard */}
+      <BentoDashboard pulseInsight={pulseInsight} />
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
         <div>
-          <h1 className="text-6xl lg:text-8xl font-black text-on-surface uppercase italic tracking-[-4px] leading-none">THE_FEED</h1>
-          <div className="mt-4 bg-primary border-[4px] border-black px-4 py-2 shadow-kinetic-sm inline-block">
-            <p className="text-black font-bold uppercase italic tracking-widest text-xs">COMMUNITY_STREAM_V2.0</p>
+          <h1 className="text-6xl lg:text-8xl font-headline font-black text-on-surface uppercase italic tracking-[-0.04em] leading-[0.9]">THE_FEED</h1>
+          <div className="mt-4 liquid-gradient border-2 border-on-surface px-4 py-2 shadow-brutal inline-block">
+            <p className="text-on-surface font-bold uppercase italic tracking-widest text-xs">COMMUNITY_STREAM_V2.0</p>
           </div>
         </div>
       </div>
 
       {/* Create Post */}
-      <div className="pulse-card">
+      <div className="bg-surface-container-low border-2 border-outline/15 shadow-brutal relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 liquid-gradient" />
         <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
           <Sparkles className="w-32 h-32 text-on-surface" />
         </div>
-        <form onSubmit={handleCreatePost}>
+        <form onSubmit={handleCreatePost} className="p-8">
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-shrink-0">
               <div className="relative group">
-                <div className="w-20 h-20 border-[6px] border-on-surface shadow-kinetic-sm overflow-hidden group-hover:scale-105 transition-transform">
+                <div className="w-20 h-20 border-2 border-on-surface shadow-brutal overflow-hidden group-hover:scale-105 transition-transform">
                   <img 
                     src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName || 'User'}`} 
                     alt="You" 
                     className="w-full h-full object-cover grayscale"
                   />
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-secondary border-[4px] border-black p-1 shadow-kinetic-thud rotate-12">
-                  <Star className="w-4 h-4 fill-black text-black" />
+                <div className="absolute -bottom-2 -right-2 bg-secondary border-2 border-on-surface p-1 shadow-brutal rotate-12">
+                  <Star className="w-4 h-4 fill-on-surface text-on-surface" />
                 </div>
               </div>
             </div>
@@ -517,7 +493,7 @@ export function Feed() {
                 <div className="flex flex-wrap gap-4">
                   {imagePreviews.map((preview, index) => (
                     <div key={index} className="relative group">
-                      <div className="w-24 h-24 border-[4px] border-on-surface shadow-kinetic-sm overflow-hidden">
+                      <div className="w-24 h-24 border-2 border-on-surface shadow-brutal overflow-hidden">
                         <img 
                           src={preview} 
                           alt={`Preview ${index}`} 
@@ -527,7 +503,7 @@ export function Feed() {
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="absolute -top-2 -right-2 bg-black text-secondary p-1 border-2 border-secondary shadow-kinetic-thud hover:bg-secondary hover:text-black transition-colors"
+                        className="absolute -top-2 -right-2 bg-on-surface text-surface p-1 border-2 border-surface shadow-brutal hover:bg-secondary hover:text-on-surface transition-colors"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -538,13 +514,13 @@ export function Feed() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-on-surface uppercase italic tracking-widest flex items-center gap-2">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase italic tracking-widest flex items-center gap-2">
                     <Users className="w-3 h-3" /> TARGET_ZONE
                   </p>
                   <select
                     value={selectedGroupId}
                     onChange={(e) => setSelectedGroupId(e.target.value)}
-                    className="w-full bg-surface-bg border-[4px] border-on-surface p-3 text-[10px] font-bold uppercase italic tracking-widest focus:outline-none focus:border-primary"
+                    className="w-full bg-surface-container-lowest border-2 border-on-surface p-3 text-[10px] font-bold uppercase italic tracking-widest focus:outline-none focus:border-primary focus:shadow-brutal"
                   >
                     <option value="">PUBLIC_STREAM</option>
                     {Object.values(groups)
@@ -558,7 +534,7 @@ export function Feed() {
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-[10px] font-bold text-on-surface uppercase italic tracking-widest flex items-center gap-2">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase italic tracking-widest flex items-center gap-2">
                     <Sparkles className="w-3 h-3" /> DATA_TAGS
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -568,10 +544,8 @@ export function Feed() {
                         type="button"
                         onClick={() => togglePostTag(tag)}
                         className={cn(
-                          "px-3 py-1 text-[8px] font-bold uppercase italic border-[3px] border-on-surface transition-all",
-                          postTags.includes(tag)
-                            ? "bg-primary text-black border-black shadow-kinetic-thud translate-x-1 translate-y-1"
-                            : "bg-surface-bg text-on-surface hover:bg-accent hover:text-black hover:border-black"
+                          "chip-pill border-2 border-transparent",
+                          postTags.includes(tag) && "chip-pill-active border-on-surface"
                         )}
                       >
                         {tag}
@@ -581,7 +555,7 @@ export function Feed() {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-8 border-t-[6px] border-on-surface">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-8 border-t-2 border-outline/15">
                 <div className="flex items-center gap-3">
                   <input 
                     type="file" 
@@ -594,7 +568,7 @@ export function Feed() {
                   <button 
                     type="button" 
                     onClick={() => fileInputRef.current?.click()}
-                    className="bg-surface-bg border-[4px] border-on-surface p-3 shadow-kinetic-thud hover:bg-accent hover:text-black hover:border-black transition-all"
+                    className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:bg-secondary hover:shadow-brutal-lg transition-all"
                     title="ADD_IMAGE"
                   >
                     <ImageIcon className="w-6 h-6" />
@@ -603,7 +577,7 @@ export function Feed() {
                     type="button"
                     onClick={handleAIImageGenerate}
                     disabled={!newPost.trim() || isGeneratingImage || isSubmitting}
-                    className="bg-surface-bg border-[4px] border-on-surface p-3 shadow-kinetic-thud hover:bg-secondary hover:text-black hover:border-black transition-all disabled:opacity-50"
+                    className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:bg-primary hover:shadow-brutal-lg transition-all disabled:opacity-50"
                     title="AI_IMAGE_GEN"
                   >
                     <Sparkles className={cn("w-6 h-6", isGeneratingImage && "animate-spin")} />
@@ -612,7 +586,7 @@ export function Feed() {
                     type="button"
                     onClick={handleAIAssist}
                     disabled={!newPost.trim() || isGenerating || isSubmitting}
-                    className="bg-surface-bg border-[4px] border-on-surface p-3 shadow-kinetic-thud hover:bg-primary hover:text-black hover:border-black transition-all disabled:opacity-50"
+                    className="bg-surface border-2 border-on-surface p-3 shadow-brutal hover:bg-tertiary hover:shadow-brutal-lg transition-all disabled:opacity-50"
                     title="AI_GHOSTWRITER"
                   >
                     <Zap className={cn("w-6 h-6", isGenerating && "animate-pulse")} />
@@ -622,7 +596,7 @@ export function Feed() {
                 <button
                   type="submit"
                   disabled={(!newPost.trim() && selectedImages.length === 0) || isSubmitting}
-                  className="kinetic-btn flex items-center justify-center gap-3 group"
+                  className="liquid-btn flex items-center justify-center gap-3 group"
                 >
                   {isSubmitting ? 'TRANSMITTING...' : 'BLAST_IT'}
                   <Send className="w-6 h-6 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
@@ -636,13 +610,13 @@ export function Feed() {
       {/* Filters & Sorting */}
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <p className="text-[10px] font-bold uppercase italic tracking-widest text-on-surface/60">// FILTER_STREAM</p>
+          <p className="text-[10px] font-bold uppercase italic tracking-widest text-on-surface-variant">// FILTER_STREAM</p>
           <div className="flex items-center gap-4">
             <span className="text-[10px] font-bold uppercase italic tracking-widest">SORT:</span>
             <select 
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-surface-bg border-[4px] border-on-surface font-bold text-[10px] uppercase italic p-2 focus:outline-none focus:border-primary"
+              className="bg-surface border-2 border-on-surface font-bold text-[10px] uppercase italic p-2 focus:outline-none focus:border-primary focus:shadow-brutal"
             >
               <option value="recent">RECENT</option>
               <option value="liked">HOTTEST</option>
@@ -656,10 +630,8 @@ export function Feed() {
               key={tag}
               onClick={() => setFilterTag(tag)}
               className={cn(
-                "px-4 py-2 text-[10px] font-bold uppercase italic border-[4px] border-on-surface transition-all",
-                filterTag === tag
-                  ? "bg-primary text-black border-black shadow-kinetic-sm translate-x-1 translate-y-1"
-                  : "bg-surface-bg text-on-surface hover:bg-secondary hover:text-black hover:border-black"
+                "chip-pill border-2 border-transparent",
+                filterTag === tag && "chip-pill-active border-on-surface"
               )}
             >
               {tag}
@@ -671,60 +643,71 @@ export function Feed() {
       {/* Feed */}
       <div className="space-y-12">
         <AnimatePresence>
-          {filteredPosts.map((post) => (
+          {filteredPosts.map((post, index) => (
             <motion.div
               key={post.id}
+              ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="pulse-card group"
+              className="bg-surface-container-low border-2 border-outline/15 shadow-brutal p-8 group relative overflow-hidden"
             >
+              <div className="absolute top-0 left-0 w-full h-1 liquid-gradient opacity-30" />
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 border-[4px] border-on-surface shadow-kinetic-sm overflow-hidden shrink-0">
+                  <Link to={`/profile/${post.authorId}`} className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden shrink-0 block hover:scale-105 transition-transform">
                     <img 
                       src={post.authorPhoto || `https://ui-avatars.com/api/?name=${post.authorName}`} 
                       alt={post.authorName} 
                       className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
                     />
-                  </div>
+                  </Link>
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <Link to={`/profile/${post.authorId}`} className="text-xl font-black text-on-surface uppercase italic tracking-tight hover:text-primary transition-colors leading-none">
+                      <Link to={`/profile/${post.authorId}`} className="text-xl font-headline font-black text-on-surface uppercase italic tracking-tight hover:text-primary transition-colors leading-tight">
                         {post.authorName}
                       </Link>
                       <div className="flex items-center gap-2">
-                        <span className="bg-accent border-2 border-black px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-kinetic-thud">LVL {Math.floor(Math.random() * 50) + 1}</span>
-                        {user && user.uid !== post.authorId && (
+                        <span className="bg-secondary border-2 border-on-surface px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-brutal">LVL {Math.floor(Math.random() * 50) + 1}</span>
+                        {user && user.uid !== post.authorId && (() => {
+                          const cState = getConnState(post.authorId);
+                          return (
                           <button
-                            onClick={() => handleToggleConnection(post.authorId)}
+                            onClick={() => handleToggleConnection(post.authorId, cState)}
+                            disabled={cState === 'pending'}
                             className={cn(
-                              "border-2 border-black px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-kinetic-thud transition-all",
-                              userProfile?.connections?.includes(post.authorId)
-                                ? "bg-primary text-black"
-                                : "bg-surface-bg text-on-surface hover:bg-secondary hover:text-black hover:border-black"
+                              "border-2 border-on-surface px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-brutal transition-all",
+                              cState === 'connected' ? "bg-primary text-on-surface" :
+                              cState === 'pending' ? "bg-on-surface text-surface opacity-50 cursor-not-allowed" : 
+                              "bg-surface text-on-surface hover:bg-secondary hover:shadow-brutal-lg"
                             )}
                           >
-                            {userProfile?.connections?.includes(post.authorId) ? 'TRIBE' : '+ JOIN'}
+                            {cState === 'connected' ? 'COMMUNITY' : cState === 'pending' ? 'PENDING' : cState === 'incoming' ? 'ACCEPT REQUEST' : '+ JOIN'}
                           </button>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
-                    <p className="text-[8px] font-mono uppercase italic tracking-widest text-on-surface/60 mt-2">
+                    <p className="text-[8px] font-mono uppercase italic tracking-widest text-on-surface-variant mt-2">
                       {post.createdAt?.toDate ? formatDistanceToNow(post.createdAt.toDate(), { addSuffix: true }) : 'JUST NOW'}
+                      {post.updatedAt && (
+                        <span className="ml-2 text-primary">
+                          // EDITED {post.updatedAt?.toDate ? formatDistanceToNow(post.updatedAt.toDate(), { addSuffix: true }) : 'JUST NOW'}
+                        </span>
+                      )}
                       {post.groupId && groups[post.groupId] && (
                         <span className="ml-2">
-                          // IN <span className="text-secondary">{(groups[post.groupId] as any).name}</span>
+                          // IN <Link to={`/groups/${post.groupId}`} className="text-secondary hover:text-primary transition-colors">{(groups[post.groupId] as any).name}</Link>
                         </span>
                       )}
                     </p>
                   </div>
                 </div>
                 <div className="relative group/menu">
-                  <button className="p-2 border-[4px] border-on-surface bg-surface-bg hover:bg-primary hover:text-black transition-colors shadow-kinetic-thud">
+                  <button className="p-2 border-2 border-on-surface bg-surface hover:bg-primary hover:shadow-brutal transition-all">
                     <MoreHorizontal className="w-5 h-5" />
                   </button>
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-surface-container border-[6px] border-on-surface shadow-kinetic-active opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-20">
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest border-2 border-on-surface shadow-brutal opacity-0 invisible group-hover/menu:opacity-100 group-hover/menu:visible transition-all z-20">
                     {(() => {
                       const isAuthor = user?.uid === post.authorId;
                       const group = post.groupId ? groups[post.groupId] : null;
@@ -740,7 +723,7 @@ export function Feed() {
                                 setEditingPostId(post.id);
                                 setEditContent(post.content);
                               }}
-                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface-bg border-[3px] border-on-surface hover:bg-primary hover:text-black transition-colors flex items-center gap-2 shadow-kinetic-thud"
+                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface border-2 border-on-surface hover:bg-primary transition-colors flex items-center gap-2 shadow-brutal"
                             >
                               <Edit2 className="w-4 h-4" /> EDIT
                             </button>
@@ -748,17 +731,25 @@ export function Feed() {
                           {canDelete && (
                             <button 
                               onClick={() => handleDeletePost(post.id)}
-                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface-bg border-[3px] border-on-surface hover:bg-secondary hover:text-black transition-colors flex items-center gap-2 shadow-kinetic-thud"
+                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface border-2 border-on-surface hover:bg-tertiary transition-colors flex items-center gap-2 shadow-brutal"
                             >
-                              <Trash2 className="w-4 h-4" /> DELETE
+                              <Trash2 className="w-4 h-4" /> PURGE
+                            </button>
+                          )}
+                          {!isAuthor && (
+                            <button 
+                              onClick={() => navigate(`/messages?chat=${post.authorId}`)}
+                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface border-2 border-on-surface hover:bg-secondary transition-colors flex items-center gap-2 shadow-brutal"
+                            >
+                              <MessageSquare className="w-4 h-4" /> MESSAGE
                             </button>
                           )}
                           {!isAuthor && (
                             <button 
                               onClick={() => handleBlockUser(post.authorId)}
-                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface-bg border-[3px] border-on-surface hover:bg-black hover:text-white transition-colors shadow-kinetic-thud"
+                              className="w-full text-left px-3 py-2 text-[10px] font-bold uppercase italic bg-surface border-2 border-on-surface hover:bg-on-surface hover:text-surface transition-colors shadow-brutal"
                             >
-                              BLOCK
+                              <Ghost className="w-4 h-4" /> SEVER_LINK
                             </button>
                           )}
                         </div>
@@ -781,29 +772,29 @@ export function Feed() {
                         setEditingPostId(null);
                         setEditContent('');
                       }}
-                      className="bg-surface-bg border-[4px] border-on-surface px-4 py-2 text-[10px] font-bold uppercase italic shadow-kinetic-thud hover:bg-secondary hover:text-black hover:border-black transition-all"
+                      className="bg-surface border-2 border-on-surface px-4 py-2 text-[10px] font-bold uppercase italic shadow-brutal hover:bg-surface-container-low transition-all"
                     >
-                      CANCEL
+                      ABORT
                     </button>
                     <button
                       onClick={() => handleUpdatePost(post.id)}
-                      className="bg-primary text-black border-[4px] border-black px-4 py-2 text-[10px] font-bold uppercase italic shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                      className="liquid-btn px-4 py-2 text-[10px]"
                     >
-                      SAVE
+                      SYNC_CHANGES
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="mb-8">
                   <div 
-                    className="text-on-surface font-bold text-xl italic leading-tight tracking-tight mb-6 prose prose-invert max-w-none prose-p:leading-tight prose-p:my-0"
+                    className="text-on-surface font-bold text-xl italic leading-tight tracking-tight mb-6 prose prose-invert max-w-none prose-p:leading-tight prose-p:my-0 uppercase"
                     dangerouslySetInnerHTML={{ __html: post.content }}
                   />
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex flex-wrap gap-3">
                       {post.tags.map(tag => (
-                        <span key={tag} className="bg-surface-bg border-[3px] border-on-surface px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-kinetic-thud">
-                          #{tag}
+                        <span key={tag} className="chip-pill text-[8px] px-2 py-0.5 border-2 border-on-surface/10">
+                          #{tag.toUpperCase()}
                         </span>
                       ))}
                     </div>
@@ -817,62 +808,73 @@ export function Feed() {
                   post.images.length === 1 ? "grid-cols-1" : "grid-cols-2"
                 )}>
                   {post.images.map((url, index) => (
-                    <div key={index} className="border-[6px] border-on-surface shadow-kinetic-sm overflow-hidden">
+                    <div key={index} className="border-2 border-on-surface shadow-brutal overflow-hidden relative group/img">
                       <img 
                         src={url} 
                         alt={`Post attachment ${index + 1}`}
-                        className="w-full h-64 object-cover grayscale hover:grayscale-0 transition-all hover:scale-105"
+                        className="w-full h-64 object-cover grayscale group-hover/img:grayscale-0 transition-all group-hover/img:scale-105"
                         referrerPolicy="no-referrer"
                       />
+                      <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none" />
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="flex items-center gap-8 pt-8 border-t-[6px] border-on-surface">
+              <div className="flex items-center gap-8 pt-8 border-t-2 border-outline/15">
                 <motion.button 
-                  whileTap={{ scale: 0.8 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => toggleLike(post.id, post.likes || [])}
                   className={cn(
-                    "flex items-center gap-3 font-bold text-[10px] uppercase italic transition-all group",
-                    post.likes?.includes(user?.uid || '') ? 'text-secondary' : 'text-on-surface hover:text-secondary'
+                    "flex items-center gap-3 font-bold text-[10px] uppercase italic transition-all group/btn",
+                    post.likes?.includes(user?.uid || '') ? 'text-secondary' : 'text-on-surface-variant hover:text-secondary'
                   )}
                 >
-                  <motion.div
-                    animate={post.likes?.includes(user?.uid || '') ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.3 }}
+                  <motion.div 
+                    key={post.likes?.includes(user?.uid || '') ? 'liked' : 'unliked'}
+                    initial={false}
+                    animate={post.likes?.includes(user?.uid || '') ? { scale: [1, 1.4, 1], rotate: [0, 15, -15, 0] } : { scale: 1 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className={cn(
+                      "p-3 border-2 border-on-surface shadow-brutal group-hover/btn:shadow-brutal-lg group-hover/btn:-translate-y-0.5 transition-all",
+                      post.likes?.includes(user?.uid || '') ? "bg-secondary text-on-secondary" : "bg-surface"
+                    )}
                   >
                     <Heart className={cn("w-5 h-5", post.likes?.includes(user?.uid || '') && "fill-current")} />
                   </motion.div>
-                  {post.likes?.length || 0}
+                  <span className="text-xs font-black italic">{post.likes?.length || 0}</span>
                 </motion.button>
                 <button 
                   onClick={() => setExpandedComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
-                  className="flex items-center gap-3 font-bold text-[10px] uppercase italic text-on-surface hover:text-primary transition-all"
+                  className="flex items-center gap-3 font-bold text-[10px] uppercase italic text-on-surface-variant hover:text-primary transition-all group/btn"
                 >
-                  <MessageCircle className="w-5 h-5" />
-                  {post.commentCount || 0}
+                  <div className="p-3 bg-surface border-2 border-on-surface shadow-brutal group-hover/btn:shadow-brutal-lg group-hover/btn:-translate-y-0.5 transition-all">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black italic">{post.commentCount || 0}</span>
                 </button>
                 <motion.button 
                   whileTap={{ scale: 0.8 }}
                   onClick={() => toggleSavePost(post.id)}
                   className={cn(
-                    "flex items-center gap-3 font-bold text-[10px] uppercase italic transition-all group",
-                    userProfile?.savedPosts?.includes(post.id) ? 'text-accent' : 'text-on-surface hover:text-accent'
+                    "flex items-center gap-3 font-bold text-[10px] uppercase italic transition-all group/btn",
+                    userProfile?.savedPosts?.includes(post.id) ? 'text-tertiary' : 'text-on-surface-variant hover:text-tertiary'
                   )}
                   title={userProfile?.savedPosts?.includes(post.id) ? "UNSAVE_POST" : "SAVE_POST"}
                 >
-                  <motion.div
-                    animate={userProfile?.savedPosts?.includes(post.id) ? { scale: [1, 1.4, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
+                  <div className={cn(
+                    "p-3 border-2 border-on-surface shadow-brutal group-hover/btn:shadow-brutal-lg group-hover/btn:-translate-y-0.5 transition-all",
+                    userProfile?.savedPosts?.includes(post.id) ? "bg-tertiary text-on-surface" : "bg-surface"
+                  )}>
                     <Bookmark className={cn("w-5 h-5", userProfile?.savedPosts?.includes(post.id) && "fill-current")} />
-                  </motion.div>
-                  {userProfile?.savedPosts?.includes(post.id) ? 'SAVED' : 'SAVE'}
+                  </div>
+                  <span className="text-xs font-black italic">{userProfile?.savedPosts?.includes(post.id) ? 'SAVED' : 'SAVE'}</span>
                 </motion.button>
-                <button className="flex items-center gap-3 font-bold text-[10px] uppercase italic text-on-surface hover:text-accent transition-all ml-auto">
-                  <Share2 className="w-5 h-5" />
-                  SHARE
+                <button className="flex items-center gap-3 font-bold text-[10px] uppercase italic text-on-surface-variant hover:text-secondary transition-all ml-auto group/btn">
+                  <div className="p-3 bg-surface border-2 border-on-surface shadow-brutal group-hover/btn:shadow-brutal-lg group-hover/btn:-translate-y-0.5 transition-all">
+                    <Share2 className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black italic">SHARE</span>
                 </button>
               </div>
 
@@ -884,7 +886,7 @@ export function Feed() {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="pt-8 mt-8 border-t-[6px] border-on-surface">
+                    <div className="pt-8 mt-8 border-t-2 border-outline/15">
                       <PostComments postId={post.id} postAuthorId={post.authorId} />
                     </div>
                   </motion.div>
@@ -894,16 +896,31 @@ export function Feed() {
           ))}
         </AnimatePresence>
 
-        {filteredPosts.length === 0 && (
-          <div className="bg-accent border-[6px] border-black text-center py-24 relative overflow-hidden shadow-kinetic">
-            <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-              <Ghost className="w-64 h-64 text-black -rotate-12 -translate-x-24 -translate-y-24" />
+        {/* Loading State / End of Feed */}
+        <div className="py-10 text-center">
+          {isLoadingMore && hasMore ? (
+            <div className="flex justify-center">
+              <div className="w-12 h-12 border-4 border-on-surface border-t-primary animate-spin shadow-brutal"></div>
+            </div>
+          ) : !hasMore && filteredPosts.length > 0 ? (
+            <div className="bg-surface-container-low border-2 border-outline/15 p-6 shadow-brutal inline-block rotate-1">
+              <p className="text-on-surface font-headline font-black uppercase italic tracking-widest text-xs">
+                // END_OF_TRANSMISSIONS // YOU_ARE_UP_TO_DATE
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        {filteredPosts.length === 0 && !isLoadingMore && (
+          <div className="bg-surface-container-low border-2 border-outline/15 text-center py-24 relative overflow-hidden shadow-brutal">
+            <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+              <Ghost className="w-64 h-64 text-on-surface -rotate-12 -translate-x-24 -translate-y-24" />
             </div>
             <div className="relative z-10">
-              <Ghost className="w-16 h-16 text-black mx-auto mb-8 animate-bounce" />
-              <h3 className="text-4xl font-black text-black uppercase italic mb-4 tracking-tighter">GHOST_TOWN</h3>
-              <div className="bg-surface-bg border-[4px] border-black px-4 py-2 shadow-kinetic-sm inline-block">
-                <p className="text-on-surface font-bold uppercase italic tracking-widest text-[10px]">BE_THE_FIRST_TO_WAKE_UP_THE_TRIBE</p>
+              <Ghost className="w-16 h-16 text-primary mx-auto mb-8 animate-bounce" />
+              <h3 className="text-4xl font-headline font-black text-on-surface uppercase italic mb-4 tracking-tighter">GHOST_TOWN</h3>
+              <div className="bg-surface-container-lowest border-2 border-outline/15 px-4 py-2 shadow-brutal inline-block">
+                <p className="text-on-surface-variant font-bold uppercase italic tracking-widest text-[10px]">BE_THE_FIRST_TO_WAKE_UP_THE_COMMUNITY</p>
               </div>
             </div>
           </div>

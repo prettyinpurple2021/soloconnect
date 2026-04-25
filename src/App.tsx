@@ -1,36 +1,38 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
-import { Feed } from './pages/Feed';
-import { Profile } from './pages/Profile';
-import { Groups } from './pages/Groups';
-import { Events } from './pages/Events';
-import { Notifications } from './pages/Notifications';
-import { Messages } from './pages/Messages';
-import { PersonalCalendar } from './pages/PersonalCalendar';
-import { SuccessStories } from './pages/SuccessStories';
-import { AcademyGroups } from './pages/AcademyGroups';
-import { AgentMarketplace } from './pages/AgentMarketplace';
-import { Challenges } from './pages/Challenges';
-import { SoloScribe } from './pages/SoloScribe';
-import { SoloSuccessAI } from './pages/SoloSuccessAI';
-import { ContentFactory } from './pages/ContentFactory';
-import { SoloSuccessAcademy } from './pages/SoloSuccessAcademy';
 import { Toaster } from 'react-hot-toast';
 import { SoloAssistant } from './components/SoloAssistant';
+
+// Lazy load pages for production performance
+import { Feed } from './pages/Feed';
+const Profile = lazy(() => import('./pages/Profile').then(m => ({ default: m.Profile })));
+const Groups = lazy(() => import('./pages/Groups').then(m => ({ default: m.Groups })));
+const GroupDetail = lazy(() => import('./pages/GroupDetail').then(m => ({ default: m.GroupDetail })));
+const Events = lazy(() => import('./pages/Events').then(m => ({ default: m.Events })));
+const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
+const Messages = lazy(() => import('./pages/Messages').then(m => ({ default: m.Messages })));
+const Connections = lazy(() => import('./pages/Connections').then(m => ({ default: m.Connections })));
+const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar').then(m => ({ default: m.PersonalCalendar })));
+const Search = lazy(() => import('./pages/Search').then(m => ({ default: m.Search })));
+const FounderMatch = lazy(() => import('./pages/FounderMatch').then(m => ({ default: m.FounderMatch })));
+const Terms = lazy(() => import('./pages/Terms').then(m => ({ default: m.Terms })));
+const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
+
+const LoadingScreen = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="w-16 h-16 border-8 border-on-surface border-t-primary rounded-none animate-spin shadow-kinetic-sm"></div>
+  </div>
+);
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isAuthReady } = useAuth();
 
   if (loading || !isAuthReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-        <div className="w-8 h-8 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) {
@@ -47,33 +49,33 @@ export default function App() {
         <BrowserRouter>
           <Toaster position="top-center" />
           <SoloAssistant />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Feed />} />
-              <Route path="profile/:userId" element={<Profile />} />
-              <Route path="groups" element={<Groups />} />
-              <Route path="events" element={<Events />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="messages" element={<Messages />} />
-              <Route path="my-calendar" element={<PersonalCalendar />} />
-              <Route path="success-stories" element={<SuccessStories />} />
-              <Route path="academy-groups" element={<AcademyGroups />} />
-              <Route path="agent-marketplace" element={<AgentMarketplace />} />
-              <Route path="challenges" element={<Challenges />} />
-              <Route path="soloscribe" element={<SoloScribe />} />
-              <Route path="solosuccess-ai" element={<SoloSuccessAI />} />
-              <Route path="content-factory" element={<ContentFactory />} />
-              <Route path="academy" element={<SoloSuccessAcademy />} />
-            </Route>
-          </Routes>
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Feed />} />
+                <Route path="profile/:userId" element={<Profile />} />
+                <Route path="groups" element={<Groups />} />
+                <Route path="groups/:groupId" element={<GroupDetail />} />
+                <Route path="events" element={<Events />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="messages" element={<Messages />} />
+                <Route path="connections" element={<Connections />} />
+                <Route path="my-calendar" element={<PersonalCalendar />} />
+                <Route path="search" element={<Search />} />
+                <Route path="founder-match" element={<FounderMatch />} />
+              </Route>
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>

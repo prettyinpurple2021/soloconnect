@@ -198,6 +198,23 @@ export function Events() {
     }
   };
 
+  const handleCheckIn = async (eventId: string) => {
+    if (!user) return;
+    const toastId = toast.loading('Initiating check-in sequence...');
+    try {
+      await addDoc(collection(db, `events/${eventId}/checkins`), {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userPhoto: user.photoURL || '',
+        timestamp: serverTimestamp()
+      });
+      toast.success('CHECK_IN_COMPLETE. TRANSMISSION_SECURE.', { id: toastId });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `events/${eventId}/checkins`);
+      toast.error('CHECK_IN_FAILED.', { id: toastId });
+    }
+  };
+
   const openInviteModal = async (event: Event) => {
     setSelectedEvent(event);
     setInviteModalOpen(true);
@@ -292,18 +309,19 @@ export function Events() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-16 pb-20 font-sans">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 bg-primary border-[12px] border-on-surface p-12 lg:p-20 shadow-kinetic -rotate-1">
-        <div className="space-y-4">
-          <h1 className="text-6xl lg:text-8xl font-black text-black uppercase italic leading-none tracking-tighter drop-shadow-[6px_6px_0px_#FFFFFF]">THE GATHERING</h1>
-          <p className="text-2xl font-black uppercase italic tracking-widest text-black/80 leading-tight">WHERE THE FOUNDERS UNITE IN THE REAL WORLD.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 glass-panel border-2 border-outline/15 p-12 lg:p-20 shadow-brutal relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 liquid-gradient" />
+        <div className="space-y-4 relative z-10">
+          <h1 className="text-6xl lg:text-8xl font-headline font-black text-on-surface uppercase italic leading-none tracking-tighter">THE_GATHERING</h1>
+          <p className="text-2xl font-bold uppercase italic tracking-widest text-on-surface-variant leading-tight">WHERE_THE_FOUNDERS_UNITE_IN_THE_REAL_WORLD.</p>
         </div>
-        <div className="flex flex-col sm:flex-row items-center gap-8">
-          <div className="bg-surface-bg border-8 border-on-surface p-2 flex items-center gap-2 shadow-kinetic-sm rotate-1">
+        <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
+          <div className="bg-surface-container-low border-2 border-outline/15 p-2 flex items-center gap-2 shadow-brutal rotate-1">
             <button 
               onClick={() => setViewMode('list')}
               className={cn(
-                "p-4 border-4 border-transparent transition-all",
-                viewMode === 'list' ? "bg-secondary border-on-surface shadow-kinetic-thud text-white" : "text-on-surface/40 hover:text-on-surface"
+                "p-4 border-2 border-transparent transition-all",
+                viewMode === 'list' ? "bg-secondary border-on-surface shadow-brutal text-on-secondary" : "text-on-surface-variant hover:text-on-surface"
               )}
             >
               <List className="w-8 h-8 stroke-[3px]" />
@@ -311,8 +329,8 @@ export function Events() {
             <button 
               onClick={() => setViewMode('calendar')}
               className={cn(
-                "p-4 border-4 border-transparent transition-all",
-                viewMode === 'calendar' ? "bg-secondary border-on-surface shadow-kinetic-thud text-white" : "text-on-surface/40 hover:text-on-surface"
+                "p-4 border-2 border-transparent transition-all",
+                viewMode === 'calendar' ? "bg-secondary border-on-surface shadow-brutal text-on-secondary" : "text-on-surface-variant hover:text-on-surface"
               )}
             >
               <LayoutGrid className="w-8 h-8 stroke-[3px]" />
@@ -320,9 +338,9 @@ export function Events() {
           </div>
           <button 
             onClick={() => setIsCreating(true)}
-            className="flex items-center justify-center gap-4 bg-accent border-8 border-on-surface text-black px-12 py-6 font-black text-3xl uppercase italic shadow-kinetic hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all rotate-2"
+            className="liquid-btn flex items-center justify-center gap-4 px-12 py-6 font-headline font-black text-3xl uppercase italic rotate-2"
           >
-            <Plus className="w-10 h-10 stroke-[4px]" /> BLAST EVENT
+            <Plus className="w-10 h-10 stroke-[4px]" /> BLAST_EVENT
           </button>
         </div>
       </div>
@@ -331,11 +349,12 @@ export function Events() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-primary border-[12px] border-on-surface p-12 lg:p-20 shadow-kinetic rotate-1"
+          className="bg-surface-container-low border-2 border-outline/15 p-12 lg:p-20 shadow-brutal rotate-1 relative overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-12 border-b-[10px] border-on-surface pb-8">
-            <h2 className="text-5xl font-black text-black uppercase italic tracking-tighter">
-              {isEditing ? 'REWIRE EVENT' : 'SPAWN A NEW EVENT'}
+          <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+          <div className="flex items-center justify-between mb-12 border-b-2 border-outline/15 pb-8">
+            <h2 className="text-5xl font-headline font-black text-on-surface uppercase italic tracking-tighter">
+              {isEditing ? 'REWIRE_EVENT' : 'SPAWN_A_NEW_EVENT'}
             </h2>
             <button 
               onClick={() => {
@@ -346,30 +365,30 @@ export function Events() {
                 setImageFile(null);
                 setImagePreview(null);
               }}
-              className="p-4 bg-surface-bg border-8 border-on-surface hover:bg-secondary transition-all shadow-kinetic-thud active:shadow-none active:translate-x-1 active:translate-y-1"
+              className="p-4 bg-surface border-2 border-on-surface hover:bg-secondary transition-all shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5"
             >
-              <X className="w-10 h-10 stroke-[4px]" />
+              <X className="w-10 h-10 stroke-[4px] text-on-surface" />
             </button>
           </div>
           <form onSubmit={isEditing ? handleUpdateEvent : handleCreateEvent} className="space-y-12">
             <div className="flex flex-col lg:flex-row gap-12">
               <div className="w-full lg:w-1/3">
-                <label className="block text-2xl font-black text-on-surface uppercase italic tracking-tighter mb-4">EVENT VISUAL</label>
+                <label className="block text-xs font-black text-on-surface-variant uppercase italic tracking-tighter mb-4">EVENT_VISUAL</label>
                 <div 
                   onClick={() => document.getElementById('cover-image-input')?.click()}
-                  className="aspect-video bg-surface-bg border-8 border-dashed border-on-surface flex flex-col items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors overflow-hidden relative group shadow-kinetic-sm"
+                  className="aspect-video bg-surface-container-lowest border-2 border-dashed border-outline/30 flex flex-col items-center justify-center cursor-pointer hover:bg-surface transition-all overflow-hidden relative group shadow-brutal"
                 >
                   {imagePreview ? (
                     <>
-                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Camera className="w-16 h-16 text-white stroke-[3px]" />
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                      <div className="absolute inset-0 bg-surface/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Camera className="w-16 h-16 text-on-surface stroke-[3px]" />
                       </div>
                     </>
                   ) : (
                     <>
-                      <Camera className="w-16 h-16 text-on-surface/20 mb-4 group-hover:text-secondary transition-colors stroke-[3px]" />
-                      <span className="text-xl font-black uppercase italic tracking-widest text-on-surface/40">UPLOAD VISUAL</span>
+                      <Camera className="w-16 h-16 text-on-surface-variant/20 mb-4 group-hover:text-secondary transition-colors stroke-[3px]" />
+                      <span className="text-xl font-black uppercase italic tracking-widest text-on-surface-variant/40">UPLOAD_VISUAL</span>
                     </>
                   )}
                 </div>
@@ -383,36 +402,36 @@ export function Events() {
               </div>
               <div className="flex-1 space-y-8">
                 <div>
-                  <label className="block text-2xl font-black text-on-surface uppercase italic tracking-tighter mb-4">EVENT TITLE</label>
+                  <label className="block text-xs font-black text-on-surface-variant uppercase italic tracking-tighter mb-4">EVENT_TITLE</label>
                   <input 
                     type="text" 
                     required
                     value={newEvent.title}
                     onChange={e => setNewEvent({...newEvent, title: e.target.value})}
-                    className="w-full bg-surface-bg border-8 border-on-surface px-8 py-6 font-black uppercase italic text-2xl shadow-kinetic-sm focus:shadow-none focus:bg-secondary/10 transition-all outline-none"
-                    placeholder="E.G. INDIE HACKERS COFFEE BLAST"
+                    className="w-full bg-surface-container-lowest border-2 border-on-surface px-8 py-6 font-bold uppercase italic text-2xl shadow-brutal focus:outline-none transition-all"
+                    placeholder="E.G. INDIE_HACKERS_COFFEE_BLAST"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <label className="block text-2xl font-black text-on-surface uppercase italic tracking-tighter mb-4">DATE & TIME</label>
+                    <label className="block text-xs font-black text-on-surface-variant uppercase italic tracking-tighter mb-4">DATE_&_TIME</label>
                     <input 
                       type="datetime-local" 
                       required
                       value={newEvent.date}
                       onChange={e => setNewEvent({...newEvent, date: e.target.value})}
-                      className="w-full bg-surface-bg border-8 border-on-surface px-8 py-6 font-black uppercase italic text-xl shadow-kinetic-sm focus:shadow-none focus:bg-secondary/10 transition-all outline-none"
+                      className="w-full bg-surface-container-lowest border-2 border-on-surface px-8 py-6 font-bold uppercase italic text-xl shadow-brutal focus:outline-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-2xl font-black text-on-surface uppercase italic tracking-tighter mb-4">LOCATION / CYBER LINK</label>
+                    <label className="block text-xs font-black text-on-surface-variant uppercase italic tracking-tighter mb-4">LOCATION_/_CYBER_LINK</label>
                     <input 
                       type="text" 
                       required
                       value={newEvent.location}
                       onChange={e => setNewEvent({...newEvent, location: e.target.value})}
-                      className="w-full bg-surface-bg border-8 border-on-surface px-8 py-6 font-black uppercase italic text-xl shadow-kinetic-sm focus:shadow-none focus:bg-secondary/10 transition-all outline-none"
-                      placeholder="E.G. BLUE BOTTLE OR ZOOM"
+                      className="w-full bg-surface-container-lowest border-2 border-on-surface px-8 py-6 font-bold uppercase italic text-xl shadow-brutal focus:outline-none transition-all"
+                      placeholder="E.G. BLUE_BOTTLE_OR_ZOOM"
                     />
                   </div>
                 </div>
@@ -420,26 +439,26 @@ export function Events() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-4">
-                <label className="block text-2xl font-black text-on-surface uppercase italic tracking-tighter">THE MISSION (DESCRIPTION)</label>
+                <label className="block text-xs font-black text-on-surface-variant uppercase italic tracking-tighter">THE_MISSION (DESCRIPTION)</label>
                 <button
                   type="button"
                   onClick={handleAIAssist}
                   disabled={!newEvent.title.trim() || isGenerating || isUploading}
-                  className="flex items-center gap-4 bg-surface-bg border-4 border-on-surface px-6 py-2 font-black uppercase italic text-sm tracking-widest shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                  className="flex items-center gap-4 bg-surface border-2 border-on-surface px-6 py-2 font-black uppercase italic text-xs tracking-widest shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all text-on-surface"
                 >
                   <Sparkles className={cn("w-6 h-6 stroke-[3px]", isGenerating ? 'animate-pulse' : '')} />
-                  {isGenerating ? 'GENERATING...' : 'AI ASSIST'}
+                  {isGenerating ? 'GENERATING...' : 'AI_ASSIST'}
                 </button>
               </div>
               <textarea 
                 required
                 value={newEvent.description}
                 onChange={e => setNewEvent({...newEvent, description: e.target.value})}
-                className="w-full bg-surface-bg border-8 border-on-surface px-8 py-6 min-h-[200px] font-black uppercase italic text-xl shadow-kinetic-sm focus:shadow-none focus:bg-secondary/10 transition-all outline-none resize-none"
-                placeholder="WHAT'S THE PLAN, FOUNDER?"
+                className="w-full bg-surface-container-lowest border-2 border-on-surface px-8 py-6 min-h-[200px] font-bold uppercase italic text-xl shadow-brutal focus:outline-none transition-all outline-none resize-none"
+                placeholder="WHAT'S_THE_PLAN_FOUNDER?"
               />
             </div>
-            <div className="flex flex-col sm:flex-row justify-end gap-8 pt-12 border-t-[10px] border-on-surface">
+            <div className="flex flex-col sm:flex-row justify-end gap-8 pt-12 border-t-2 border-outline/15">
               <button 
                 type="button" 
                 onClick={() => {
@@ -450,16 +469,16 @@ export function Events() {
                   setImageFile(null);
                   setImagePreview(null);
                 }}
-                className="px-12 py-6 text-2xl font-black text-on-surface uppercase italic hover:bg-on-surface/5 transition-colors"
+                className="px-12 py-6 text-2xl font-black text-on-surface-variant uppercase italic hover:text-on-surface transition-colors"
               >
                 ABORT
               </button>
               <button 
                 type="submit"
                 disabled={isUploading}
-                className="bg-on-surface border-8 border-on-surface text-surface-bg px-16 py-6 font-black text-3xl uppercase italic shadow-kinetic hover:translate-x-2 hover:translate-y-2 hover:shadow-none disabled:opacity-50 transition-all"
+                className="liquid-btn px-16 py-6 font-headline font-black text-3xl uppercase italic"
               >
-                {isUploading ? 'BLASTING...' : isEditing ? 'REWIRE EVENT' : 'BLAST EVENT!'}
+                {isUploading ? 'BLASTING...' : isEditing ? 'REWIRE_EVENT' : 'BLAST_EVENT!'}
               </button>
             </div>
           </form>
@@ -490,32 +509,38 @@ export function Events() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 className={cn(
-                  "bg-surface-bg border-[12px] border-on-surface p-12 lg:p-16 flex flex-col lg:flex-row gap-12 relative overflow-hidden group hover:bg-secondary/5 transition-colors shadow-kinetic",
+                  "bg-surface-container-low border-2 border-outline/15 p-12 lg:p-16 flex flex-col lg:flex-row gap-12 relative overflow-hidden group hover:bg-surface-container-lowest transition-colors shadow-brutal",
                   index % 2 === 0 ? "rotate-1" : "-rotate-1"
                 )}
               >
+                {isEventToday && isAttending && (
+                  <div className="absolute top-0 right-0 z-20">
+                    <DigitalLanyard user={userProfile} eventTitle={event.title} />
+                  </div>
+                )}
+                
                 {isEventToday && (
-                  <div className="absolute top-0 right-0 bg-primary text-black text-xs font-black px-8 py-4 border-l-[10px] border-b-[10px] border-on-surface uppercase italic tracking-widest z-10 animate-pulse">
-                    HAPPENING NOW
+                  <div className="absolute top-0 right-0 bg-primary text-on-surface text-[10px] font-black px-8 py-4 border-l-2 border-b-2 border-on-surface uppercase italic tracking-widest z-10 animate-pulse">
+                    HAPPENING_NOW
                   </div>
                 )}
                 
                 {/* Date Block & Cover Image */}
                 <div className="flex flex-col gap-8 shrink-0">
-                  <div className="w-32 h-32 bg-secondary border-8 border-on-surface shadow-kinetic-sm flex flex-col items-center justify-center rotate-6 group-hover:rotate-0 transition-transform">
-                    <span className="text-white font-black text-lg uppercase italic tracking-widest mb-1">
-                      {format(eventDate, 'MMM')}
+                  <div className="w-32 h-32 bg-secondary border-2 border-on-surface shadow-brutal flex flex-col items-center justify-center rotate-6 group-hover:rotate-0 transition-transform">
+                    <span className="text-on-secondary font-black text-lg uppercase italic tracking-widest mb-1">
+                      {format(eventDate, 'MMM').toUpperCase()}
                     </span>
-                    <span className="text-6xl font-black text-white leading-none tracking-tighter">
+                    <span className="text-6xl font-headline font-black text-on-secondary leading-none tracking-tighter">
                       {format(eventDate, 'dd')}
                     </span>
                   </div>
                   {event.coverImage && (
-                    <div className="w-32 h-32 border-8 border-on-surface shadow-kinetic-sm overflow-hidden -rotate-6 group-hover:rotate-0 transition-transform">
+                    <div className="w-32 h-32 border-2 border-on-surface shadow-brutal overflow-hidden -rotate-6 group-hover:rotate-0 transition-transform">
                       <img 
                         src={event.coverImage} 
                         alt={event.title} 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
                       />
                     </div>
                   )}
@@ -524,61 +549,71 @@ export function Events() {
                 {/* Content */}
                 <div className="flex-1 min-w-0 space-y-8">
                   <div className="flex flex-wrap items-center gap-6">
-                    <h3 className="text-4xl lg:text-5xl font-black uppercase italic text-on-surface truncate tracking-tighter leading-none">{event.title}</h3>
+                    <h3 className="text-4xl lg:text-5xl font-headline font-black uppercase italic text-on-surface truncate tracking-tighter leading-none">{event.title}</h3>
                     {isTrending && (
-                      <span className="bg-accent border-4 border-on-surface px-4 py-1 text-xs font-black uppercase italic shadow-kinetic-thud flex items-center gap-2">
+                      <span className="bg-tertiary border-2 border-on-surface px-4 py-1 text-[10px] font-black uppercase italic shadow-brutal flex items-center gap-2 text-on-surface">
                         <Sparkles className="w-4 h-4 stroke-[3px]" /> TRENDING
                       </span>
                     )}
                     {event.groupId && groups[event.groupId] && (
-                      <span className="bg-secondary border-4 border-on-surface px-4 py-1 text-xs font-black uppercase italic shadow-kinetic-thud text-white">
-                        {groups[event.groupId]}
+                      <span className="bg-secondary border-2 border-on-surface px-4 py-1 text-[10px] font-black uppercase italic shadow-brutal text-on-secondary">
+                        {groups[event.groupId].toUpperCase()}
                       </span>
                     )}
                   </div>
                   <p className="text-2xl font-bold italic text-on-surface leading-tight">"{event.description}"</p>
                   
-                  <div className="flex flex-wrap items-center gap-10 text-sm font-black uppercase italic tracking-widest text-on-surface/60">
+                  <div className="flex flex-wrap items-center gap-10 text-sm font-black uppercase italic tracking-widest text-on-surface-variant">
                     <div className="flex items-center gap-4">
                       <Clock className="w-8 h-8 text-secondary stroke-[3px]" />
-                      <span className="text-xl text-on-surface">{format(eventDate, 'h:mm a')}</span>
+                      <span className="text-xl text-on-surface">{format(eventDate, 'h:mm a').toUpperCase()}</span>
                     </div>
                     <div className="flex items-center gap-4">
                       <MapPin className="w-8 h-8 text-primary stroke-[3px]" />
-                      <span className="text-xl text-on-surface truncate max-w-[300px]">{event.location}</span>
+                      <span className="text-xl text-on-surface truncate max-w-[300px]">{event.location.toUpperCase()}</span>
                     </div>
-                    <div className="flex items-center gap-4 bg-on-surface text-surface-bg px-6 py-3 border-4 border-on-surface shadow-kinetic-thud">
-                      <Users className="w-6 h-6 stroke-[3px]" />
-                      <span className="text-lg">{event.attendees?.length || 0} FOUNDERS GOING</span>
+                    <div className="flex items-center gap-4 bg-surface border-2 border-on-surface px-6 py-3 shadow-brutal">
+                      <Users className="w-6 h-6 stroke-[3px] text-on-surface" />
+                      <span className="text-lg text-on-surface">{event.attendees?.length || 0} FOUNDERS_GOING</span>
                     </div>
                     
                     {/* Attendee Avatars */}
                     {event.attendees && event.attendees.length > 0 && (
                       <div className="flex -space-x-6 overflow-hidden">
                         {event.attendees.slice(0, 5).map((uid, i) => (
-                          <div key={uid} className="w-14 h-14 border-4 border-on-surface shadow-kinetic-thud overflow-hidden rounded-full bg-surface-bg">
+                          <div key={uid} className="w-14 h-14 border-2 border-on-surface shadow-brutal overflow-hidden rounded-full bg-surface">
                             <img
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all"
                               src={`https://ui-avatars.com/api/?name=User+${i}&background=random`}
                               alt=""
                             />
                           </div>
                         ))}
                         {event.attendees.length > 5 && (
-                          <div className="flex items-center justify-center w-14 h-14 border-4 border-on-surface bg-surface-bg shadow-kinetic-thud text-xs font-black text-on-surface rounded-full">
+                          <div className="flex items-center justify-center w-14 h-14 border-2 border-on-surface bg-surface shadow-brutal text-xs font-black text-on-surface rounded-full">
                             +{event.attendees.length - 5}
                           </div>
                         )}
                       </div>
                     )}
-
-                    {isAttending && (
-                      <div className="flex items-center gap-3 bg-primary border-4 border-on-surface px-4 py-2 text-black shadow-kinetic-thud">
-                        <UserCheck className="w-6 h-6 stroke-[3px]" />
-                        <span className="font-black">YOU'RE IN</span>
-                      </div>
-                    )}
                   </div>
+                  
+                  {isAttending && (
+                    <div className="flex flex-col w-full lg:w-auto gap-4">
+                      <div className="flex items-center gap-3 bg-primary border-2 border-on-surface px-4 py-2 text-on-surface shadow-brutal">
+                        <UserCheck className="w-6 h-6 stroke-[3px]" />
+                        <span className="font-black">YOU'RE_IN</span>
+                      </div>
+                      {isEventToday && (
+                        <button
+                          onClick={() => handleCheckIn(event.id)}
+                          className="bg-accent text-on-accent border-2 border-on-surface px-6 py-2 font-black uppercase italic text-xs shadow-brutal hover:shadow-none translate-all"
+                        >
+                          LIVE_CHECK_IN
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Action */}
@@ -586,26 +621,26 @@ export function Events() {
                   <button 
                     onClick={() => toggleRSVP(event.id, event.attendees || [])}
                     className={cn(
-                      "w-full lg:w-auto border-8 border-on-surface px-10 py-4 font-black text-2xl uppercase italic shadow-kinetic-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all",
+                      "w-full lg:w-auto border-2 border-on-surface px-10 py-4 font-black text-2xl uppercase italic shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all",
                       isAttending 
-                        ? 'bg-surface-bg text-on-surface' 
-                        : 'bg-secondary text-white'
+                        ? 'bg-surface text-on-surface' 
+                        : 'bg-secondary text-on-secondary'
                     )}
                   >
-                    {isAttending ? 'CANCEL RSVP' : 'RSVP NOW'}
+                    {isAttending ? 'CANCEL_RSVP' : 'RSVP_NOW'}
                   </button>
                   
                   {user?.uid === event.creatorId && (
                     <div className="flex flex-col w-full lg:w-auto gap-6">
                       <button
                         onClick={() => startEditing(event)}
-                        className="w-full lg:w-auto bg-primary border-8 border-on-surface px-8 py-3 font-black text-lg uppercase italic shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4"
+                        className="w-full lg:w-auto bg-surface border-2 border-on-surface px-8 py-3 font-black text-lg uppercase italic shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-4 text-on-surface"
                       >
                         <Edit2 className="w-6 h-6 stroke-[3px]" /> REWIRE
                       </button>
                       <button
                         onClick={() => openInviteModal(event)}
-                        className="w-full lg:w-auto bg-accent border-8 border-on-surface px-8 py-3 font-black text-lg uppercase italic shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all flex items-center justify-center gap-4"
+                        className="w-full lg:w-auto bg-surface border-2 border-on-surface px-8 py-3 font-black text-lg uppercase italic shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-4 text-on-surface"
                       >
                         <Share2 className="w-6 h-6 stroke-[3px]" /> INVITE
                       </button>
@@ -618,17 +653,17 @@ export function Events() {
           </AnimatePresence>
 
           {events.length === 0 && !isCreating && (
-            <div className="bg-white border-[12px] border-black border-dashed p-32 text-center space-y-12 shadow-[24px_24px_0px_0px_rgba(0,0,0,1)]">
-              <CalendarIcon className="w-32 h-32 text-black/10 mx-auto stroke-[3px]" />
+            <div className="bg-surface-container-low border-2 border-outline/15 border-dashed p-32 text-center space-y-12 shadow-brutal">
+              <CalendarIcon className="w-32 h-32 text-on-surface-variant/10 mx-auto stroke-[3px]" />
               <div className="space-y-4">
-                <h3 className="text-5xl font-black uppercase italic tracking-tighter">NO GATHERINGS YET</h3>
-                <p className="text-xl font-black uppercase italic tracking-widest text-black/40">CHECK BACK LATER OR BLAST YOUR OWN EVENT.</p>
+                <h3 className="text-5xl font-headline font-black uppercase italic tracking-tighter text-on-surface">NO_GATHERINGS_YET</h3>
+                <p className="text-xl font-black uppercase italic tracking-widest text-on-surface-variant">CHECK_BACK_LATER_OR_BLAST_YOUR_OWN_EVENT.</p>
               </div>
               <button 
                 onClick={() => setIsCreating(true)}
-                className="bg-[#FFFF00] border-8 border-black text-black px-12 py-6 font-black text-3xl uppercase italic shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] hover:translate-x-2 hover:translate-y-2 hover:shadow-none transition-all"
+                className="liquid-btn px-12 py-6 font-headline font-black text-3xl uppercase italic"
               >
-                CREATE AN EVENT
+                CREATE_AN_EVENT
               </button>
             </div>
           )}
@@ -638,24 +673,25 @@ export function Events() {
       {/* Invite Modal */}
       <AnimatePresence>
         {inviteModalOpen && selectedEvent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-surface/80 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="bg-surface-bg border-[16px] border-on-surface w-full max-w-2xl overflow-hidden flex flex-col shadow-kinetic-active max-h-[90vh]"
+              className="bg-surface-container-low border-2 border-outline/15 w-full max-w-2xl overflow-hidden flex flex-col shadow-brutal max-h-[90vh] relative"
             >
-              <div className="p-10 border-b-[12px] border-on-surface bg-secondary flex items-center justify-between shrink-0">
-                <h3 className="text-5xl font-black uppercase italic text-white tracking-tighter drop-shadow-[4px_4px_0px_#000000]">SUMMON FOUNDERS</h3>
+              <div className="absolute top-0 left-0 w-full h-2 liquid-gradient" />
+              <div className="p-10 border-b-2 border-outline/15 bg-secondary flex items-center justify-between shrink-0">
+                <h3 className="text-5xl font-headline font-black uppercase italic text-on-secondary tracking-tighter">SUMMON_FOUNDERS</h3>
                 <button 
                   onClick={() => setInviteModalOpen(false)}
-                  className="p-6 bg-surface-bg border-8 border-on-surface hover:bg-accent transition-all shadow-kinetic-thud active:shadow-none active:translate-x-2 active:translate-y-2"
+                  className="p-6 bg-surface border-2 border-on-surface hover:bg-primary transition-all shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5"
                 >
-                  <X className="w-10 h-10 stroke-[4px]" />
+                  <X className="w-10 h-10 stroke-[4px] text-on-surface" />
                 </button>
               </div>
               
-              <div className="p-12 overflow-y-auto flex-1 bg-surface-bg space-y-8">
+              <div className="p-12 overflow-y-auto flex-1 bg-surface-container-low space-y-8">
                 {connections.length > 0 ? (
                   <div className="grid grid-cols-1 gap-8">
                     {connections.map(conn => (
@@ -663,44 +699,44 @@ export function Events() {
                         key={conn.uid}
                         onClick={() => toggleConnectionSelection(conn.uid)}
                         className={cn(
-                          "bg-surface-bg border-8 border-on-surface p-8 flex items-center gap-8 cursor-pointer transition-all shadow-kinetic-thud hover:translate-x-1 hover:translate-y-1 hover:shadow-none",
+                          "bg-surface-container-lowest border-2 border-outline/15 p-8 flex items-center gap-8 cursor-pointer transition-all shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5",
                           selectedConnections.includes(conn.uid) 
-                            ? 'bg-primary/10 border-primary' 
+                            ? 'bg-primary/5 border-primary' 
                             : ''
                         )}
                       >
-                        <div className="w-20 h-20 border-8 border-on-surface shadow-kinetic-thud overflow-hidden bg-surface-bg">
+                        <div className="w-20 h-20 border-2 border-on-surface shadow-brutal overflow-hidden bg-surface">
                           <img 
                             src={conn.photoURL || `https://ui-avatars.com/api/?name=${conn.displayName}`}
                             alt={conn.displayName}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all"
                           />
                         </div>
                         <span className="text-3xl font-black uppercase italic text-on-surface flex-1 tracking-tighter">{conn.displayName}</span>
                         <div className={cn(
-                          "w-12 h-12 border-8 border-on-surface flex items-center justify-center shadow-kinetic-thud",
-                          selectedConnections.includes(conn.uid) ? 'bg-primary' : 'bg-surface-bg'
+                          "w-12 h-12 border-2 border-on-surface flex items-center justify-center shadow-brutal transition-all",
+                          selectedConnections.includes(conn.uid) ? 'bg-primary' : 'bg-surface'
                         )}>
-                          {selectedConnections.includes(conn.uid) && <div className="w-4 h-4 bg-black" />}
+                          {selectedConnections.includes(conn.uid) && <div className="w-4 h-4 bg-on-surface" />}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-32 space-y-8">
-                    <Users className="w-32 h-32 text-on-surface/10 mx-auto stroke-[3px]" />
-                    <p className="text-2xl font-black uppercase italic tracking-widest text-on-surface/40">YOU HAVE NO FOUNDERS TO SUMMON YET.</p>
+                    <Users className="w-32 h-32 text-on-surface-variant/10 mx-auto stroke-[3px]" />
+                    <p className="text-2xl font-black uppercase italic tracking-widest text-on-surface-variant/40">YOU_HAVE_NO_FOUNDERS_TO_SUMMON_YET.</p>
                   </div>
                 )}
               </div>
               
-              <div className="p-12 border-t-[12px] border-on-surface bg-accent/10 shrink-0">
+              <div className="p-12 border-t-2 border-outline/15 bg-surface-container-low shrink-0">
                 <button
                   onClick={handleSendInvites}
                   disabled={selectedConnections.length === 0 || isInviting}
-                  className="w-full bg-on-surface border-8 border-on-surface text-surface-bg py-10 font-black text-4xl uppercase italic shadow-kinetic hover:translate-x-2 hover:translate-y-2 hover:shadow-none disabled:opacity-50 transition-all"
+                  className="liquid-btn w-full py-10 font-headline font-black text-4xl uppercase italic"
                 >
-                  {isInviting ? 'SUMMONING...' : `SUMMON ${selectedConnections.length} FOUNDER${selectedConnections.length !== 1 ? 'S' : ''}`}
+                  {isInviting ? 'SUMMONING...' : `SUMMON_${selectedConnections.length}_FOUNDER${selectedConnections.length !== 1 ? 'S' : ''}`}
                 </button>
               </div>
             </motion.div>
@@ -708,5 +744,25 @@ export function Events() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function DigitalLanyard({ user, eventTitle }: { user: any, eventTitle: string }) {
+  return (
+    <motion.div
+      initial={{ y: -50, x: 50, rotate: 15 }}
+      animate={{ y: -10, x: 10, rotate: 0 }}
+      className="bg-surface border-4 border-on-surface p-4 w-32 shadow-brutal-lg rotate-1 flex flex-col items-center gap-2"
+    >
+      <div className="w-full h-1 liquid-gradient mb-2" />
+      <div className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden">
+        <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName}`} alt="" className="w-full h-full object-cover grayscale" />
+      </div>
+      <div className="text-[6px] font-black uppercase italic tracking-tighter text-on-surface text-center line-clamp-1">{user?.displayName}</div>
+      <div className="w-full border-t-2 border-outline/15 pt-1">
+        <div className="text-[5px] font-mono text-on-surface-variant uppercase text-center">{eventTitle}</div>
+      </div>
+      <div className="bg-primary border-2 border-on-surface w-full py-0.5 text-[5px] font-black text-center text-on-surface uppercase italic">ACCESS_GRANTED</div>
+    </motion.div>
   );
 }

@@ -97,6 +97,38 @@ export const analyzePulse = async (stats: any): Promise<string> => {
   }
 };
 
+export const suggestMatches = async (userProfile: any, otherUsers: any[]): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `You are a high-level founder matchmaking agent. 
+      Analyze the current user's profile and a list of other founders. 
+      Identify the top 3 most complementary matches.
+      
+      Current User:
+      ${JSON.stringify(userProfile)}
+      
+      Other Founders:
+      ${JSON.stringify(otherUsers)}
+      
+      Return a JSON array of objects with this structure:
+      [
+        {
+          "uid": "string",
+          "reason": "One sentence explaining why they are a great match (e.g., 'Their expertise in backend development perfectly complements your frontend skills.')",
+          "synergyScore": number (1-100)
+        }
+      ]
+      
+      Only return the JSON array, no other text.`,
+    });
+    return response.text || "[]";
+  } catch (error) {
+    console.error("Gemini Match Error:", error);
+    return "[]";
+  }
+};
+
 export const createChatSession = (systemInstruction: string): Chat => {
   return ai.chats.create({
     model: "gemini-3-flash-preview",

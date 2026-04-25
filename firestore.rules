@@ -39,29 +39,35 @@ service cloud.firestore {
     // ===============================================================
     // Domain Validators
     // ===============================================================
-    function isValidUser() {
-      return hasRequiredFields(['uid', 'displayName', 'email', 'createdAt']) &&
-             isValidString('displayName', 1, 100) &&
-             isValidString('email', 3, 255) &&
-             request.resource.data.createdAt is timestamp &&
+    function isValidUser(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['uid', 'displayName', 'email', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('uid', 1, 100) &&
+             isValidOptionalString('displayName', 1, 100) &&
+             isValidOptionalString('email', 3, 255) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
              isValidOptionalString('bio', 0, 1000) &&
-             isValidOptionalString('location', 0, 200) &&
+             isValidOptionalString('location', 0, 100) &&
              isValidOptionalString('photoURL', 0, 2000) &&
              (!('skills' in request.resource.data) || request.resource.data.skills is list) &&
              (!('links' in request.resource.data) || request.resource.data.links is map) &&
              (!('connections' in request.resource.data) || request.resource.data.connections is list) &&
+             (!('pendingConnections' in request.resource.data) || request.resource.data.pendingConnections is list) &&
+             (!('sentRequests' in request.resource.data) || request.resource.data.sentRequests is list) &&
              (!('savedPosts' in request.resource.data) || request.resource.data.savedPosts is list) &&
              (!('blockedUsers' in request.resource.data) || request.resource.data.blockedUsers is list) &&
              (!('portfolio' in request.resource.data) || request.resource.data.portfolio is list) &&
+             (!('goals' in request.resource.data) || request.resource.data.goals is list) &&
              (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
-    function isValidPost() {
-      return hasRequiredFields(['authorId', 'authorName', 'content', 'createdAt']) &&
-             isValidString('authorId', 1, 100) &&
-             isValidString('authorName', 1, 100) &&
-             isValidString('content', 0, 5000) &&
-             request.resource.data.createdAt is timestamp &&
+    function isValidPost(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['authorId', 'authorName', 'content', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('authorId', 1, 100) &&
+             isValidOptionalString('authorName', 1, 100) &&
+             isValidOptionalString('content', 0, 5000) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
              (!('likes' in request.resource.data) || request.resource.data.likes is list) &&
              (!('images' in request.resource.data) || request.resource.data.images is list) &&
              (!('tags' in request.resource.data) || request.resource.data.tags is list) &&
@@ -70,36 +76,39 @@ service cloud.firestore {
              (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
-    function isValidComment() {
-      return hasRequiredFields(['postId', 'authorId', 'authorName', 'content', 'createdAt']) &&
-             isValidString('postId', 1, 100) &&
-             isValidString('authorId', 1, 100) &&
-             isValidString('authorName', 1, 100) &&
-             isValidString('content', 1, 2000) &&
-             request.resource.data.createdAt is timestamp &&
-             (!('parentId' in request.resource.data) || isValidString('parentId', 1, 100)) &&
+    function isValidComment(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['postId', 'authorId', 'authorName', 'content', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('postId', 1, 100) &&
+             isValidOptionalString('authorId', 1, 100) &&
+             isValidOptionalString('authorName', 1, 100) &&
+             isValidOptionalString('content', 1, 2000) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('parentId' in request.resource.data) || isValidOptionalString('parentId', 1, 100)) &&
              (!('replyCount' in request.resource.data) || request.resource.data.replyCount is number) &&
              (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
-    function isValidGroup() {
-      return hasRequiredFields(['name', 'description', 'creatorId', 'createdAt']) &&
-             isValidString('name', 1, 100) &&
-             isValidString('description', 1, 2000) &&
-             isValidString('creatorId', 1, 100) &&
-             request.resource.data.createdAt is timestamp &&
+    function isValidGroup(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['name', 'description', 'creatorId', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('name', 1, 100) &&
+             isValidOptionalString('description', 1, 2000) &&
+             isValidOptionalString('creatorId', 1, 100) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
              (!('members' in request.resource.data) || request.resource.data.members is list) &&
              (!('moderators' in request.resource.data) || request.resource.data.moderators is list) &&
              (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
-    function isValidEvent() {
-      return hasRequiredFields(['title', 'description', 'date', 'creatorId', 'createdAt']) &&
-             isValidString('title', 1, 100) &&
-             isValidString('description', 1, 2000) &&
-             isValidString('creatorId', 1, 100) &&
-             request.resource.data.createdAt is timestamp &&
-             request.resource.data.date is timestamp &&
+    function isValidEvent(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['title', 'description', 'date', 'creatorId', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('title', 1, 100) &&
+             isValidOptionalString('description', 1, 2000) &&
+             isValidOptionalString('creatorId', 1, 100) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('date' in request.resource.data) || request.resource.data.date is timestamp) &&
              (!('location' in request.resource.data) || request.resource.data.location is string) &&
              (!('coverImage' in request.resource.data) || request.resource.data.coverImage is string) &&
              (!('groupId' in request.resource.data) || request.resource.data.groupId is string) &&
@@ -107,46 +116,48 @@ service cloud.firestore {
              (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
     }
 
-    function isValidNotification() {
-      return hasRequiredFields(['userId', 'type', 'sourceUserId', 'sourceUserName', 'content', 'link', 'read', 'createdAt']) &&
-             isValidString('userId', 1, 100) &&
-             isValidString('type', 1, 50) &&
-             request.resource.data.type in ['connection_request', 'comment', 'event_invite'] &&
-             isValidString('sourceUserId', 1, 100) &&
-             isValidString('sourceUserName', 1, 100) &&
-             isValidString('content', 1, 500) &&
-             isValidString('link', 1, 500) &&
-             request.resource.data.read is bool &&
-             request.resource.data.createdAt is timestamp;
+    function isValidNotification(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['userId', 'type', 'sourceUserId', 'sourceUserName', 'content', 'link', 'read', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('type', 1, 50) &&
+             (!('type' in request.resource.data) || request.resource.data.type in ['connection_request', 'comment', 'event_invite']) &&
+             isValidOptionalString('sourceUserId', 1, 100) &&
+             isValidOptionalString('sourceUserName', 1, 100) &&
+             isValidOptionalString('content', 1, 500) &&
+             isValidOptionalString('link', 1, 500) &&
+             (!('read' in request.resource.data) || request.resource.data.read is bool) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
     }
 
-    function isValidChat() {
-      return hasRequiredFields(['participants', 'createdAt', 'updatedAt']) &&
-             request.resource.data.participants is list &&
-             request.resource.data.participants.size() == 2 &&
-             request.resource.data.participants.hasAll([request.auth.uid]) &&
-             request.resource.data.createdAt is timestamp &&
-             request.resource.data.updatedAt is timestamp &&
+    function isValidChat(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['participants', 'createdAt', 'updatedAt'];
+      return hasRequiredFields(requiredFields) &&
+             (!('participants' in request.resource.data) || (request.resource.data.participants is list && request.resource.data.participants.size() == 2 && request.resource.data.participants.hasAll([request.auth.uid]))) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp) &&
              (!('lastMessage' in request.resource.data) || request.resource.data.lastMessage is string) &&
              (!('lastMessageAt' in request.resource.data) || request.resource.data.lastMessageAt is timestamp) &&
              (!('unreadCount' in request.resource.data) || request.resource.data.unreadCount is map);
     }
 
-    function isValidMessage() {
-      return hasRequiredFields(['chatId', 'senderId', 'content', 'createdAt', 'read']) &&
-             isValidString('chatId', 1, 100) &&
-             request.resource.data.senderId == request.auth.uid &&
-             isValidString('content', 1, 5000) &&
-             request.resource.data.createdAt is timestamp &&
-             request.resource.data.read is bool;
+    function isValidMessage(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['chatId', 'senderId', 'content', 'createdAt', 'read'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('chatId', 1, 100) &&
+             (!('senderId' in request.resource.data) || request.resource.data.senderId == request.auth.uid) &&
+             isValidOptionalString('content', 1, 5000) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('read' in request.resource.data) || request.resource.data.read is bool);
     }
 
-    function isValidPersonalEvent() {
-      return hasRequiredFields(['userId', 'title', 'date', 'createdAt']) &&
-             isValidString('userId', 1, 100) &&
-             isValidString('title', 1, 200) &&
-             request.resource.data.date is timestamp &&
-             request.resource.data.createdAt is timestamp &&
+    function isValidPersonalEvent(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['userId', 'title', 'date', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('title', 1, 200) &&
+             (!('date' in request.resource.data) || request.resource.data.date is timestamp) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
              (!('description' in request.resource.data) || request.resource.data.description is string) &&
              (!('type' in request.resource.data) || request.resource.data.type in ['event', 'reminder', 'task']) &&
              (!('recurrence' in request.resource.data) || request.resource.data.recurrence in ['none', 'daily', 'weekly', 'monthly']) &&
@@ -155,23 +166,80 @@ service cloud.firestore {
              (!('excludedDates' in request.resource.data) || request.resource.data.excludedDates is list);
     }
 
-    function isValidInsight() {
-      return hasRequiredFields(['userId', 'agentId', 'agentName', 'content', 'createdAt']) &&
+    function isValidInsight(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['userId', 'agentId', 'agentName', 'content', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('agentId', 1, 100) &&
+             isValidOptionalString('agentName', 1, 100) &&
+             isValidOptionalString('content', 1, 10000) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
+    }
+
+    function isValidDocument(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['userId', 'title', 'content', 'type', 'createdAt', 'updatedAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('title', 1, 200) &&
+             isValidOptionalString('content', 1, 50000) &&
+             (!('type' in request.resource.data) || request.resource.data.type in ['ideation', 'document']) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp) &&
+             (!('updatedAt' in request.resource.data) || request.resource.data.updatedAt is timestamp);
+    }
+
+    function isValidActivity() {
+      return hasRequiredFields(['userId', 'type', 'targetId', 'targetName', 'createdAt']) &&
              isValidString('userId', 1, 100) &&
-             isValidString('agentId', 1, 100) &&
-             isValidString('agentName', 1, 100) &&
-             isValidString('content', 1, 10000) &&
+             isValidString('type', 1, 100) &&
+             isValidString('targetId', 0, 100) &&
+             isValidString('targetName', 1, 200) &&
              request.resource.data.createdAt is timestamp;
     }
 
-    function isValidDocument() {
-      return hasRequiredFields(['userId', 'title', 'content', 'type', 'createdAt', 'updatedAt']) &&
-             isValidString('userId', 1, 100) &&
-             isValidString('title', 1, 200) &&
-             isValidString('content', 1, 50000) &&
-             request.resource.data.type in ['ideation', 'document'] &&
-             request.resource.data.createdAt is timestamp &&
-             request.resource.data.updatedAt is timestamp;
+    function isValidVouch(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['toUserId', 'fromUserId', 'fromUserName', 'content', 'category', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('toUserId', 1, 100) &&
+             isValidOptionalString('fromUserId', 1, 100) &&
+             isValidOptionalString('fromUserName', 1, 100) &&
+             isValidOptionalString('fromUserPhoto', 0, 2000) &&
+             isValidOptionalString('content', 1, 1000) &&
+             (!('category' in request.resource.data) || request.resource.data.category in ['technical', 'equity', 'vision', 'execution']) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
+    }
+
+    function isValidGroupResource(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['groupId', 'userId', 'title', 'url', 'type', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('groupId', 1, 100) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('userName', 1, 100) &&
+             isValidOptionalString('title', 1, 200) &&
+             isValidOptionalString('url', 1, 2000) &&
+             (!('type' in request.resource.data) || request.resource.data.type in ['link', 'doc', 'legal', 'tool']) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
+    }
+
+    function isValidGroupGoal(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['groupId', 'userId', 'title', 'status', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('groupId', 1, 100) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('title', 1, 200) &&
+             (!('status' in request.resource.data) || request.resource.data.status in ['active', 'completed']) &&
+             (!('targetDate' in request.resource.data) || request.resource.data.targetDate is timestamp) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
+    }
+
+    function isValidCheckIn(isUpdate) {
+      let requiredFields = isUpdate ? [] : ['eventId', 'userId', 'userName', 'status', 'createdAt'];
+      return hasRequiredFields(requiredFields) &&
+             isValidOptionalString('eventId', 1, 100) &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('userName', 1, 100) &&
+             isValidOptionalString('photoURL', 0, 2000) &&
+             isValidOptionalString('status', 1, 100) &&
+             (!('createdAt' in request.resource.data) || request.resource.data.createdAt is timestamp);
     }
 
     // ===============================================================
@@ -179,25 +247,37 @@ service cloud.firestore {
     // ===============================================================
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId) && isValidUser() && uidUnchanged();
-      allow update: if isAuthenticated() && isValidUser() && uidUnchanged() &&
-                    request.resource.data.createdAt == resource.data.createdAt &&
+      allow create: if isOwner(userId) && isValidUser(false) && uidUnchanged();
+      allow update: if isAuthenticated() && isValidUser(true) && uidUnchanged() &&
+                    (!('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt) &&
                     (
                       isOwner(userId) ||
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['connections']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pendingConnections']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sentRequests']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['connections', 'pendingConnections']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['connections', 'sentRequests']) ||
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['connections', 'pendingConnections', 'sentRequests']) ||
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['blockedUsers'])
                     );
     }
 
+    match /vouches/{vouchId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidVouch(false) && request.resource.data.fromUserId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId);
+    }
+
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidPost() && authorIdUnchanged();
-      allow update: if isAuthenticated() && isValidPost() &&
+      allow create: if isAuthenticated() && isValidPost(false) && authorIdUnchanged();
+      allow update: if isAuthenticated() && isValidPost(true) &&
                     (
                       // Owner can update content
                       (request.auth.uid == resource.data.authorId &&
-                       request.resource.data.authorId == resource.data.authorId &&
-                       request.resource.data.createdAt == resource.data.createdAt)
+                       (!('authorId' in request.resource.data) || request.resource.data.authorId == resource.data.authorId) &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt))
                       ||
                       // Anyone can like/unlike (only 'likes' array changes)
                       (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']))
@@ -219,12 +299,12 @@ service cloud.firestore {
 
     match /comments/{commentId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidComment() && authorIdUnchanged();
-      allow update: if isAuthenticated() && isValidComment() &&
+      allow create: if isAuthenticated() && isValidComment(false) && authorIdUnchanged();
+      allow update: if isAuthenticated() && isValidComment(true) &&
                     (
                       (request.auth.uid == resource.data.authorId &&
-                       request.resource.data.authorId == resource.data.authorId &&
-                       request.resource.data.createdAt == resource.data.createdAt)
+                       (!('authorId' in request.resource.data) || request.resource.data.authorId == resource.data.authorId) &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt))
                       ||
                       (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount']))
                     );
@@ -233,14 +313,14 @@ service cloud.firestore {
 
     match /groups/{groupId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidGroup() &&
+      allow create: if isAuthenticated() && isValidGroup(false) &&
                     request.resource.data.creatorId == request.auth.uid;
-      allow update: if isAuthenticated() && isValidGroup() &&
+      allow update: if isAuthenticated() && isValidGroup(true) &&
                     (
                       // Creator can update everything
                       (request.auth.uid == resource.data.creatorId &&
-                       request.resource.data.creatorId == resource.data.creatorId &&
-                       request.resource.data.createdAt == resource.data.createdAt)
+                       (!('creatorId' in request.resource.data) || request.resource.data.creatorId == resource.data.creatorId) &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt))
                       ||
                       // Moderators can remove members (but not the creator)
                       (
@@ -252,7 +332,7 @@ service cloud.firestore {
                       // Regular members can only join/leave themselves
                       (
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']) &&
-                        request.resource.data.moderators == resource.data.moderators &&
+                        (!('moderators' in request.resource.data) || request.resource.data.moderators == resource.data.moderators) &&
                         (
                           // Joining
                           (request.resource.data.members.size() == resource.data.members.size() + 1 &&
@@ -267,45 +347,65 @@ service cloud.firestore {
                       )
                     );
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.creatorId;
+
+      match /resources/{resourceId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidGroupResource(false) && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+        allow update: if false;
+        allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId);
+      }
+
+      match /goals/{goalId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidGroupGoal(false) && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.moderators;
+        allow update: if isAuthenticated() && isValidGroupGoal(true) && (request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.moderators);
+        allow delete: if isAuthenticated() && (request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId);
+      }
     }
 
     match /events/{eventId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidEvent() &&
+      allow create: if isAuthenticated() && isValidEvent(false) &&
                     request.resource.data.creatorId == request.auth.uid;
-      allow update: if isAuthenticated() && isValidEvent() &&
+      allow update: if isAuthenticated() && isValidEvent(true) &&
                     (
                       // Creator can update details
                       (request.auth.uid == resource.data.creatorId &&
-                       request.resource.data.creatorId == resource.data.creatorId &&
-                       request.resource.data.createdAt == resource.data.createdAt)
+                       (!('creatorId' in request.resource.data) || request.resource.data.creatorId == resource.data.creatorId) &&
+                       (!('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt))
                       ||
                       // Anyone can RSVP (only 'attendees' array changes)
                       (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees']))
                     );
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.creatorId;
+
+      match /checkins/{userId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && isValidCheckIn(false) && request.auth.uid == userId;
+        allow delete: if isAuthenticated() && (request.auth.uid == userId || request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.creatorId);
+      }
     }
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated() && isValidNotification() &&
+      allow create: if isAuthenticated() && isValidNotification(false) &&
                     request.resource.data.sourceUserId == request.auth.uid;
-      allow update: if isAuthenticated() && isValidNotification() &&
+      allow update: if isAuthenticated() && isValidNotification(true) &&
                     request.auth.uid == resource.data.userId &&
-                    request.resource.data.userId == resource.data.userId &&
-                    request.resource.data.createdAt == resource.data.createdAt &&
+                    (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId) &&
+                    (!('createdAt' in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt) &&
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     match /chats/{chatId} {
       allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
-      allow create: if isAuthenticated() && isValidChat();
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants && isValidChat();
+      allow create: if isAuthenticated() && isValidChat(false);
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants && isValidChat(true);
       
       match /messages/{messageId} {
         allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-        allow create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && isValidMessage();
+        allow create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && isValidMessage(false);
         allow update: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       }
@@ -313,22 +413,36 @@ service cloud.firestore {
 
     match /personal_events/{eventId} {
       allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated() && isValidPersonalEvent() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && isValidPersonalEvent() && request.auth.uid == resource.data.userId && request.resource.data.userId == resource.data.userId;
+      allow create: if isAuthenticated() && isValidPersonalEvent(false) && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidPersonalEvent(true) && request.auth.uid == resource.data.userId && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId);
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     match /insights/{insightId} {
       allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated() && isValidInsight() && request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && isValidInsight(false) && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
 
     match /documents/{docId} {
       allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if isAuthenticated() && isValidDocument() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && isValidDocument() && request.auth.uid == resource.data.userId && request.resource.data.userId == resource.data.userId;
+      allow create: if isAuthenticated() && isValidDocument(false) && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && isValidDocument(true) && request.auth.uid == resource.data.userId && (!('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId);
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidActivity() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if false;
+      allow delete: if isAdmin();
     }
   }
 }

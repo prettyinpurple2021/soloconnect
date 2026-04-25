@@ -14,8 +14,11 @@ export interface UserProfileData {
   links: { [key: string]: string };
   portfolio: any[];
   connections: string[];
+  pendingConnections?: string[];
+  sentRequests?: string[];
   savedPosts?: string[];
   blockedUsers?: string[];
+  onboardingDismissed?: boolean;
   createdAt: any;
   updatedAt: any;
 }
@@ -60,6 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               links: {},
               portfolio: [],
               connections: [],
+              pendingConnections: [],
+              sentRequests: [],
               savedPosts: [],
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
@@ -70,6 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (docSnap.exists()) {
               setUserProfile(docSnap.data() as UserProfileData);
             }
+          }, (error) => {
+            handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
           });
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);

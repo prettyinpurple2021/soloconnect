@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, Link as LinkIcon, Unlink } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -16,12 +15,8 @@ interface RichTextEditorProps {
 export function RichTextEditor({ content, onChange, placeholder, className }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline cursor-pointer',
-        },
+      StarterKit.configure({
+        // StarterKit options go here if needed, but history is enabled by default
       }),
       Placeholder.configure({
         placeholder: placeholder || 'TRANSMIT_DATA_HERE...',

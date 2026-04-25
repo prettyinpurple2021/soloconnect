@@ -11,10 +11,12 @@
         "photoURL": { "type": "string" },
         "bio": { "type": "string" },
         "skills": { "type": "array", "items": { "type": "string" } },
-        "location": { "type": "string" },
+        "location": { "type": "string", "maxLength": 100 },
         "links": { "type": "object" },
         "portfolio": { "type": "array", "items": { "type": "object" } },
         "connections": { "type": "array", "items": { "type": "string" } },
+        "pendingConnections": { "type": "array", "items": { "type": "string" } },
+        "sentRequests": { "type": "array", "items": { "type": "string" } },
         "blockedUsers": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
@@ -175,12 +177,88 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title", "date", "createdAt"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A user activity log entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["join_group", "comment_post", "connect_user", "create_post", "like_post", "vouch_user", "check_in"] },
+        "targetId": { "type": "string" },
+        "targetName": { "type": "string" },
+        "metadata": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "targetId", "targetName", "createdAt"]
+    },
+    "Vouch": {
+      "title": "Vouch",
+      "description": "A peer endorsement for a founder",
+      "type": "object",
+      "properties": {
+        "toUserId": { "type": "string" },
+        "fromUserId": { "type": "string" },
+        "fromUserName": { "type": "string" },
+        "fromUserPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["technical", "equity", "vision", "execution"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["toUserId", "fromUserId", "fromUserName", "content", "category", "createdAt"]
+    },
+    "GroupResource": {
+      "title": "GroupResource",
+      "description": "A resource shared in a group vault",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "type": { "type": "string", "enum": ["link", "doc", "legal", "tool"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["groupId", "userId", "title", "url", "type", "createdAt"]
+    },
+    "GroupGoal": {
+      "title": "GroupGoal",
+      "description": "A shared mission goal for a group",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "completed"] },
+        "targetDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["groupId", "userId", "title", "status", "createdAt"]
+    },
+    "CheckIn": {
+      "title": "CheckIn",
+      "description": "An attendee check-in at an event",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["eventId", "userId", "userName", "status", "createdAt"]
     }
   },
   "firestore": {
     "users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "User profiles"
+    },
+    "vouches/{vouchId}": {
+      "schema": { "$ref": "#/entities/Vouch" },
+      "description": "Peer endorsements"
     },
     "posts/{postId}": {
       "schema": { "$ref": "#/entities/Post" },
@@ -194,9 +272,21 @@
       "schema": { "$ref": "#/entities/Group" },
       "description": "Community groups"
     },
+    "groups/{groupId}/resources/{resourceId}": {
+      "schema": { "$ref": "#/entities/GroupResource" },
+      "description": "Group resource vault"
+    },
+    "groups/{groupId}/goals/{goalId}": {
+      "schema": { "$ref": "#/entities/GroupGoal" },
+      "description": "Group mission tracker"
+    },
     "events/{eventId}": {
       "schema": { "$ref": "#/entities/Event" },
       "description": "Community events"
+    },
+    "events/{eventId}/checkins/{userId}": {
+      "schema": { "$ref": "#/entities/CheckIn" },
+      "description": "Event check-ins"
     },
     "notifications/{notificationId}": {
       "schema": { "$ref": "#/entities/Notification" },
@@ -221,6 +311,10 @@
     "documents/{docId}": {
       "schema": { "$ref": "#/entities/Document" },
       "description": "SoloScribe documents"
+    },
+    "activities/{activityId}": {
+      "schema": { "$ref": "#/entities/Activity" },
+      "description": "User activity logs"
     }
   }
 }
