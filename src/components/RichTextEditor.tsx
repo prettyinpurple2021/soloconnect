@@ -2,8 +2,10 @@ import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Bold, Italic, Link as LinkIcon, Unlink } from 'lucide-react';
+import { Bold, Italic, Link as LinkIcon, Unlink, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { suggestPostSpark } from '../services/geminiService';
+import { toast } from 'react-hot-toast';
 
 interface RichTextEditorProps {
   content: string;
@@ -13,10 +15,10 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ content, onChange, placeholder, className }: RichTextEditorProps) {
+  const [isSparking, setIsSparking] = React.useState(false);
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // StarterKit options go here if needed, but history is enabled by default
       }),
       Placeholder.configure({
         placeholder: placeholder || 'TRANSMIT_DATA_HERE...',
@@ -36,6 +38,27 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
       },
     },
   });
+
+  const handleSpark = async () => {
+    if (!editor || isSparking) return;
+    const text = editor.getText();
+    if (text.length < 5) {
+      toast.error('NEED_MORE_DATA_FOR_SUGGESTION');
+      return;
+    }
+
+    setIsSparking(true);
+    const toastId = toast.loading('INHALING_SIGNAL...');
+    try {
+      const spark = await suggestPostSpark(text);
+      editor.chain().focus().insertContent(`<p><strong>💡 AI_SPARK:</strong> <em>${spark}</em></p>`).run();
+      toast.success('SPARK_IGNITED', { id: toastId });
+    } catch (error) {
+      toast.error('STATIC_INTERFERENCE', { id: toastId });
+    } finally {
+      setIsSparking(false);
+    }
+  };
 
   // Update editor content when external content changes (e.g. from AI assist)
   React.useEffect(() => {
@@ -113,6 +136,17 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Ri
             <Unlink className="w-4 h-4" />
           </button>
         )}
+        <div className="flex-1" />
+        <button
+          type="button"
+          disabled={isSparking}
+          onClick={handleSpark}
+          className="p-2 border-[3px] border-on-surface shadow-kinetic-thud bg-accent text-on-accent hover:bg-primary hover:text-black hover:border-black transition-all flex items-center gap-2 group"
+          title="Get AI Suggestion"
+        >
+          <Sparkles className={cn("w-4 h-4", isSparking && "animate-spin")} />
+          <span className="text-[10px] font-black uppercase italic hidden sm:block">AI_SPARK</span>
+        </button>
       </div>
       <EditorContent editor={editor} />
     </div>

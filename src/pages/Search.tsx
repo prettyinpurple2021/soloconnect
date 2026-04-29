@@ -45,7 +45,7 @@ export function Search() {
               title: data.displayName || 'Anonymous Founder',
               subtitle: data.bio || 'Solo Founder',
               image: data.photoURL,
-              link: `/profile/${doc.id}`
+              link: `/feed/profile/${doc.id}`
             });
           }
         });
@@ -61,7 +61,7 @@ export function Search() {
               type: 'group',
               title: data.name,
               subtitle: data.description,
-              link: `/groups/${doc.id}`
+              link: `/feed/groups/${doc.id}`
             });
           }
         });

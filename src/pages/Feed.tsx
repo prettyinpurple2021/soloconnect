@@ -18,7 +18,7 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { OnboardingChecklist } from '../components/OnboardingChecklist';
 import { BentoDashboard } from '../components/BentoDashboard';
 import { generatePostContent, generateImage, analyzePulse } from '../services/geminiService';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { addXP } from '../lib/reputation';
 
 interface Post {
   id: string;
@@ -67,6 +67,19 @@ export function Feed() {
   const [displayLimit, setDisplayLimit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [stats, setStats] = useState({
+    activeNodes: 0,
+    milestones: 0,
+    collabs: 0,
+    velocity: '0%',
+    chartData: [] as { name: string; value: number }[],
+    topFounder: {
+      name: 'NEON_GLOW',
+      photo: 'https://picsum.photos/seed/founder/100/100',
+      level: 42,
+      label: 'COMMUNITY_PIONEER'
+    }
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -82,18 +95,78 @@ export function Feed() {
   }, [hasMore, isLoadingMore]);
 
   useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Real-time listeners for stats would be better but let's do a one-time fetch or simplified logic
+        const postsRef = collection(db, 'posts');
+        const usersRef = collection(db, 'users');
+        
+        // Use onSnapshot for live stats
+        const unsubPosts = onSnapshot(query(postsRef, limit(100)), (snapshot) => {
+          const postsList = snapshot.docs.map(d => d.data());
+          
+          // Generate chart data (last 7 days)
+          const now = new Date();
+          const last7Days = Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date(now);
+            d.setDate(d.getDate() - (6 - i));
+            return {
+              name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+              date: d.toDateString(),
+              value: 0
+            };
+          });
+
+          postsList.forEach(p => {
+            const date = p.createdAt?.toDate ? p.createdAt.toDate() : new Date();
+            const day = date.toDateString();
+            const foundDay = last7Days.find(d => d.date === day);
+            if (foundDay) foundDay.value++;
+          });
+
+          setStats(prev => ({
+            ...prev,
+            chartData: last7Days.map(({ name, value }) => ({ name: name.toUpperCase(), value })),
+            velocity: `${Math.min(100, Math.floor((postsList.length / 50) * 100))}%`
+          }));
+        });
+
+        const unsubUsers = onSnapshot(query(usersRef, limit(100)), (snapshot) => {
+          const users = snapshot.docs.map(d => d.data());
+          const topUser = users.sort((a, b) => (b.xp || 0) - (a.xp || 0))[0];
+
+          setStats(prev => ({
+            ...prev,
+            activeNodes: snapshot.size,
+            topFounder: topUser ? {
+              name: topUser.displayName?.toUpperCase().replace(/\s+/g, '_') || 'ANON_NODE',
+              photo: topUser.photoURL || 'https://picsum.photos/seed/founder/100/100',
+              level: topUser.level || 1,
+              label: topUser.xp && topUser.xp > 5000 ? 'LEGENDARY_BUILDER' : 'ACTIVE_NODE'
+            } : prev.topFounder
+          }));
+        });
+
+        return () => {
+          unsubPosts();
+          unsubUsers();
+        };
+      } catch (error) {
+        console.error("Stats Error:", error);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
     const fetchPulse = async () => {
-      const stats = {
-        activeNow: 1,
-        milestones: 0,
-        collaborations: 0,
-        velocity: '0%'
-      };
       const insight = await analyzePulse(stats);
       setPulseInsight(insight);
     };
-    fetchPulse();
-  }, []);
+    if (stats.activeNodes > 0) {
+      fetchPulse();
+    }
+  }, [stats.activeNodes]);
 
   useEffect(() => {
     let q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(displayLimit));
@@ -181,18 +254,20 @@ export function Feed() {
         imageUrls.push(url);
       }
 
-      await addDoc(collection(db, 'posts'), {
-        authorId: user.uid,
-        authorName: user.displayName || 'Anonymous',
-        authorPhoto: user.photoURL || '',
-        content: newPost.trim(),
-        images: imageUrls,
-        tags: postTags,
-        groupId: selectedGroupId || null,
-        likes: [],
-        commentCount: 0,
-        createdAt: serverTimestamp(),
-      });
+        await addDoc(collection(db, 'posts'), {
+          authorId: user.uid,
+          authorName: user.displayName || 'Anonymous',
+          authorPhoto: user.photoURL || '',
+          content: newPost.trim(),
+          images: imageUrls,
+          tags: postTags,
+          groupId: selectedGroupId || null,
+          likes: [],
+          commentCount: 0,
+          createdAt: serverTimestamp(),
+        });
+        
+        await addXP(user.uid, 'create_post');
       
       setNewPost('');
       setPostTags([]);
@@ -244,6 +319,7 @@ export function Feed() {
           targetId: postId,
           targetName: 'a transmission',
         });
+        await addXP(user.uid, 'like_post');
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
@@ -449,7 +525,7 @@ export function Feed() {
       <OnboardingChecklist />
 
       {/* Bento Kinetic Dashboard */}
-      <BentoDashboard pulseInsight={pulseInsight} />
+      <BentoDashboard pulseInsight={pulseInsight} stats={stats} />
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
         <div>
@@ -460,8 +536,11 @@ export function Feed() {
         </div>
       </div>
 
-      {/* Create Post */}
-      <div className="bg-surface-container-low border-2 border-outline/15 shadow-brutal relative overflow-hidden">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
+        {/* Main Stream */}
+        <div className="xl:col-span-8 space-y-12">
+          {/* Create Post */}
+          <div className="bg-surface-container-low border-2 border-outline/15 shadow-brutal relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 liquid-gradient" />
         <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
           <Sparkles className="w-32 h-32 text-on-surface" />
@@ -655,7 +734,7 @@ export function Feed() {
               <div className="absolute top-0 left-0 w-full h-1 liquid-gradient opacity-30" />
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                  <Link to={`/profile/${post.authorId}`} className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden shrink-0 block hover:scale-105 transition-transform">
+                  <Link to={`/feed/profile/${post.authorId}`} className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden shrink-0 block hover:scale-105 transition-transform">
                     <img 
                       src={post.authorPhoto || `https://ui-avatars.com/api/?name=${post.authorName}`} 
                       alt={post.authorName} 
@@ -664,7 +743,7 @@ export function Feed() {
                   </Link>
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <Link to={`/profile/${post.authorId}`} className="text-xl font-headline font-black text-on-surface uppercase italic tracking-tight hover:text-primary transition-colors leading-tight">
+                      <Link to={`/feed/profile/${post.authorId}`} className="text-xl font-headline font-black text-on-surface uppercase italic tracking-tight hover:text-primary transition-colors leading-tight">
                         {post.authorName}
                       </Link>
                       <div className="flex items-center gap-2">
@@ -697,7 +776,7 @@ export function Feed() {
                       )}
                       {post.groupId && groups[post.groupId] && (
                         <span className="ml-2">
-                          // IN <Link to={`/groups/${post.groupId}`} className="text-secondary hover:text-primary transition-colors">{(groups[post.groupId] as any).name}</Link>
+                          // IN <Link to={`/feed/groups/${post.groupId}`} className="text-secondary hover:text-primary transition-colors">{(groups[post.groupId] as any).name}</Link>
                         </span>
                       )}
                     </p>
@@ -925,7 +1004,103 @@ export function Feed() {
             </div>
           </div>
         )}
+        </div>
       </div>
+
+        {/* Bento Sidebar */}
+        <div className="xl:col-span-4 space-y-8">
+          {/* Trending Missions Bento Card */}
+          <div className="glass-panel border-2 border-on-surface p-6 shadow-brutal relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-125 transition-transform">
+              <TrendingUp className="w-24 h-24 text-on-surface" />
+            </div>
+            <h3 className="text-xl font-headline font-black uppercase italic tracking-tighter text-on-surface mb-6 flex items-center gap-3">
+              TRENDING_MISSIONS <Zap className="w-5 h-5 text-primary" />
+            </h3>
+            <div className="space-y-4">
+              {['Launch 1.0', '100 True Fans', 'Build in Public', 'Protocol Alpha'].map((mission, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-surface-container-lowest border-2 border-on-surface shadow-brutal hover:bg-primary/10 cursor-pointer transition-all">
+                  <span className="text-[10px] font-black uppercase italic tracking-widest">{mission}</span>
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3 text-secondary" />
+                    <span className="text-[8px] font-black">{Math.floor(Math.random() * 50) + 10} BUILDS</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="w-full mt-6 py-2 bg-on-surface text-surface text-[10px] font-black uppercase italic hover:bg-primary hover:text-on-surface transition-all">
+              EXPLORE_ALL_MISSIONS
+            </button>
+          </div>
+
+          {/* Quick Connect Bento Card */}
+          <div className="bg-secondary p-6 shadow-brutal border-2 border-on-surface relative overflow-hidden group">
+            <div className="absolute -left-4 -bottom-4 opacity-10 group-hover:-rotate-12 transition-transform">
+               <Users className="w-32 h-32 text-on-surface" />
+            </div>
+            <h3 className="text-xl font-headline font-black uppercase italic tracking-tighter text-on-surface mb-4">FOUNDER_SYNC</h3>
+            <p className="text-[10px] font-black uppercase italic tracking-widest text-on-surface/60 mb-6">NODES_IN_YOUR_ORBIT</p>
+            <div className="flex -space-x-4 mb-6">
+               {[1,2,3,4,5].map(i => (
+                 <div key={i} className="w-12 h-12 border-2 border-on-surface shadow-brutal overflow-hidden">
+                   <img src={`https://picsum.photos/seed/${i+100}/100/100`} className="w-full h-full object-cover grayscale" alt="user" />
+                 </div>
+               ))}
+            </div>
+            <Link to="/feed/founder-match" className="block text-center py-3 bg-on-surface text-surface text-[10px] font-black uppercase italic shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
+               RUN_MATCH_PROTOCOL
+            </Link>
+          </div>
+
+          {/* Hall of Trust Bento Card */}
+          <div className="bg-primary/20 p-6 shadow-brutal border-2 border-on-surface relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 opacity-10 group-hover:rotate-12 transition-transform">
+               <Star className="w-32 h-32 text-on-surface" />
+            </div>
+            <h3 className="text-xl font-headline font-black uppercase italic tracking-tighter text-on-surface mb-2">HALL_OF_TRUST</h3>
+            <p className="text-[10px] font-black uppercase italic tracking-widest text-on-surface/60 mb-6">MOST_VOUCHED_FOUNDERS</p>
+            <div className="space-y-3">
+               {[
+                 { name: 'Founder Zero', vouches: 128, avatar: '1' },
+                 { name: 'Cyber Nomad', vouches: 94, avatar: '2' },
+                 { name: 'Protocol Lead', vouches: 82, avatar: '3' }
+               ].map((founder, i) => (
+                 <div key={i} className="flex items-center gap-3 p-2 bg-surface-container-lowest border-2 border-on-surface shadow-brutal">
+                    <img src={`https://picsum.photos/seed/${founder.avatar}/50/50`} className="w-8 h-8 border-2 border-on-surface grayscale" />
+                    <div className="flex-1 min-w-0">
+                       <p className="text-[8px] font-black uppercase italic truncate">{founder.name}</p>
+                       <div className="flex items-center gap-1">
+                          <Star className="w-2 h-2 text-primary fill-primary" />
+                          <span className="text-[10px] font-black">{founder.vouches}</span>
+                       </div>
+                    </div>
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          {/* Community Pings Bento Case */}
+          <div className="glass-panel border-2 border-on-surface p-6 shadow-brutal">
+             <h3 className="text-xl font-headline font-black uppercase italic tracking-tighter text-on-surface mb-6 flex items-center gap-3">
+                GLOBAL_PINGS <Activity className="w-5 h-5 text-accent" />
+             </h3>
+             <div className="space-y-6">
+                {[
+                  { text: "@PROTO_X manifested a new ARTIFACT", time: "2m ago" },
+                  { text: "MISSION_HUB: 'SAAS_WARS' just spiked", time: "15m ago" },
+                  { text: "@NEON reached LEVEL 50", time: "1h ago" }
+                ].map((ping, i) => (
+                  <div key={i} className="border-l-2 border-on-surface/20 pl-4 relative">
+                    <div className="absolute left-[-5px] top-1/2 -translate-y-1/2 w-2 h-2 bg-accent rotate-45" />
+                    <p className="text-[10px] font-black uppercase italic text-on-surface leading-tight mb-1">{ping.text}</p>
+                    <span className="text-[8px] font-bold text-on-surface-variant uppercase">{ping.time}</span>
+                  </div>
+                ))}
+             </div>
+          </div>
+        </div>
+      </div>
+
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}

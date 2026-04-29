@@ -224,7 +224,7 @@ export function Notifications() {
                   <div className="flex-1 min-w-0 relative z-10">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <p className="text-on-surface text-lg font-black uppercase italic tracking-tighter">
-                        <Link to={`/profile/${notification.sourceUserId}`} className="hover:text-secondary transition-colors drop-shadow-[1px_1px_0px_#00ffff]">
+                        <Link to={`/feed/profile/${notification.sourceUserId}`} className="hover:text-secondary transition-colors drop-shadow-[1px_1px_0px_#00ffff]">
                           {notification.sourceUserName}
                         </Link>
                       </p>

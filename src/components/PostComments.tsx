@@ -10,6 +10,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
 import { logActivity } from '../lib/activities';
+import { addXP } from '../lib/reputation';
 
 interface Comment {
   id: string;
@@ -138,6 +139,7 @@ export function PostComments({ postId, postAuthorId }: PostCommentsProps) {
           commentSnippet: contentToSubmit.slice(0, 50) + (contentToSubmit.length > 50 ? '...' : '')
         }
       });
+      await addXP(user.uid, 'comment_post');
 
       toast.success('Comment posted!');
     } catch (error) {

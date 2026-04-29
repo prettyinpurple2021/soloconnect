@@ -4,10 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, serverTimestamp, setDoc, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { MapPin, Link as LinkIcon, Edit2, Briefcase, Calendar, Mail, Check, X, UserPlus, UserCheck, Activity, Image as ImageIcon, ExternalLink, Camera, Globe, Twitter, Linkedin, Github, MessageSquare, Zap, Ghost, Star, Trophy, Plus, Trash2, Target } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Edit2, Briefcase, Calendar, Mail, Check, X, UserPlus, UserCheck, Activity, Image as ImageIcon, ExternalLink, Camera, Globe, Twitter, Linkedin, Github, MessageSquare, Zap, Ghost, Star, Trophy, Plus, Trash2, Target, User, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toggleUserConnection, getConnectionState } from '../lib/connections';
+import { logActivity } from '../lib/activities';
 import { cn } from '../lib/utils';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { VouchSystem } from '../components/VouchSystem';
@@ -32,6 +33,7 @@ interface UserProfile {
   coverURL?: string;
   bio: string;
   skills: string[];
+  endorsements?: { [skill: string]: string[] }; // { skillName: [userId1, userId2] }
   location: string;
   links: { [key: string]: string };
   portfolio: PortfolioItem[];
@@ -40,6 +42,8 @@ interface UserProfile {
   goals?: { id: string; title: string; status: 'pending' | 'completed'; createdAt: number }[];
   founderType?: 'Bootstrapper' | 'Visionary' | 'Builder' | 'Specialist';
   momentum?: number;
+  xp?: number;
+  level?: number;
   isVerified?: boolean;
   createdAt: any;
   updatedAt?: any;
@@ -53,7 +57,7 @@ export function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [editForm, setEditForm] = useState<Partial<UserProfile>>({});
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'activity' | 'goals' | 'vouches'>('portfolio');
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'activity' | 'goals' | 'vouches' | 'settings'>('portfolio');
 
   // Portfolio Modal State
   const [isAddingProject, setIsAddingProject] = useState(false);
@@ -75,6 +79,73 @@ export function Profile() {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const coverImageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleConfirmCoverImage = async () => {
+    if (!userId || !isOwner || !coverImage) return;
+    const toastId = toast.loading('UPLOADING_COVER_ART...');
+    try {
+      const coverRef = ref(storage, `covers/${userId}/${Date.now()}_${coverImage.name}`);
+      await uploadBytes(coverRef, coverImage);
+      const coverURL = await getDownloadURL(coverRef);
+      
+      await updateDoc(doc(db, 'users', userId), {
+        coverURL,
+        updatedAt: serverTimestamp()
+      });
+      
+      if (profile) {
+        setProfile({ ...profile, coverURL });
+      }
+      
+      setCoverImage(null);
+      if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+      setCoverImagePreview(null);
+      
+      toast.success('GRID_EXPANDED! NEW_COVER_SYNCED.', { id: toastId });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+      toast.error('ATMOS_STORM! UPLOAD_FAILED.', { id: toastId });
+    }
+  };
+
+  const handleToggleEndorsement = async (skill: string) => {
+    if (!currentUser || !userId || isOwner || !profile) return;
+    
+    const currentEndorsements = profile.endorsements || {};
+    const skillEndorsements = currentEndorsements[skill] || [];
+    const hasEndorsed = skillEndorsements.includes(currentUser.uid);
+    
+    let nextEndorsements: string[];
+    if (hasEndorsed) {
+      nextEndorsements = skillEndorsements.filter(id => id !== currentUser.uid);
+    } else {
+      nextEndorsements = [...skillEndorsements, currentUser.uid];
+    }
+    
+    const updatedEndorsements = {
+      ...currentEndorsements,
+      [skill]: nextEndorsements
+    };
+    
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        endorsements: updatedEndorsements
+      });
+      setProfile({ ...profile, endorsements: updatedEndorsements });
+      toast.success(hasEndorsed ? 'ENDORSEMENT_REDACTED.' : 'SKILL_ENDORSED!_SIGNAL_BOOSTED.');
+      
+      if (!hasEndorsed) {
+        await logActivity({
+          userId: currentUser.uid,
+          type: 'vouch_user', // Using vouch_user since it's similar
+          targetId: userId,
+          targetName: `${profile.displayName} (${skill})`
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  };
 
   const isOwner = currentUser?.uid === userId;
   const isConnected = currentUserProfile?.connections?.includes(userId || '');
@@ -344,6 +415,21 @@ export function Profile() {
       };
 
       await updateDoc(doc(db, 'users', userId), updatedData);
+
+      // Trigger simulated confirmation email transmission
+      try {
+        await fetch('/api/confirm-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            action: 'profile_update',
+            timestamp: Date.now()
+          })
+        });
+      } catch (e) {
+        console.warn('System Transmission failed, but profile synced.');
+      }
       
       setProfile({ ...profile, ...updatedData } as UserProfile);
       setIsEditing(false);
@@ -353,11 +439,53 @@ export function Profile() {
       if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
       setProfileImagePreview(null);
       setCoverImagePreview(null);
-      toast.success('Profile saved.', { id: toastId });
+      toast.success('PROFILE_SYNCED. IDENTITY_ECHO_TRANSMITTED.', { id: toastId });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
       toast.error('Failed to save profile.', { id: toastId });
     }
+  };
+
+  const { logOut } = useAuth();
+  
+  const handleDeleteAccount = async () => {
+    if (!currentUser || !userId || !isOwner) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'TOTAL_WIPE_PROTOCOL',
+      message: 'WARNING: THIS_ACTION_IS_IRREVERSIBLE. ALL_DATA_STREAMS_POSTS_AND_CONNECTIONS_WILL_BE_ERASED_FROM_THE_GRID. PROCEED_WITH_DISCONNECT?',
+      onConfirm: async () => {
+        const toastId = toast.loading('EXECUTING_PURGE...');
+        try {
+          // Trigger simulated confirmation email transmission for deletion
+          await fetch('/api/confirm-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId,
+              action: 'account_deletion',
+              timestamp: Date.now()
+            })
+          });
+
+          // Delete the firestore document
+          await updateDoc(doc(db, 'users', userId), {
+            deleted: true,
+            updatedAt: serverTimestamp()
+          });
+
+          // In a real app with Admin SDK, we'd delete the Auth user here too.
+          // For client-side simulation, we sign out and show a "DELETED" state.
+          await logOut?.();
+          toast.success('ACCOUNT_PURGED. FREEDOM_GAINED.', { id: toastId });
+          navigate('/');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+          toast.error('PURGE_FAILURE. SYSTEM_PROTECTED.', { id: toastId });
+        }
+      }
+    });
   };
 
   const handleToggleConnection = async () => {
@@ -495,6 +623,43 @@ export function Profile() {
         <div className="absolute inset-0 bg-black/20 pointer-events-none"></div>
         <div className="absolute top-0 left-0 w-full h-1 liquid-gradient z-10" />
 
+        {coverImagePreview && !isEditing && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-30 p-4 gap-6">
+            <div className="text-center">
+              <p className="text-white font-black text-2xl uppercase italic tracking-tighter mb-2 drop-shadow-md">CONFIRM_COVER_SYNCHRONIZATION?</p>
+              <p className="text-primary text-[10px] font-black uppercase italic tracking-widest">WILL_BE_VISIBLE_TO_ALL_NODES_IN_THE_NETWORK</p>
+            </div>
+            <div className="flex gap-6">
+              <button 
+                onClick={handleConfirmCoverImage}
+                className="bg-primary border-4 border-on-surface px-8 py-3 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 transition-all flex items-center gap-3 font-black uppercase italic"
+              >
+                <Check className="w-8 h-8" /> EXECUTE_UPLOAD
+              </button>
+              <button 
+                onClick={() => {
+                  setCoverImage(null);
+                  if (coverImagePreview) URL.revokeObjectURL(coverImagePreview);
+                  setCoverImagePreview(null);
+                }}
+                className="bg-secondary border-4 border-on-surface px-8 py-3 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 transition-all flex items-center gap-3 font-black uppercase italic"
+              >
+                <X className="w-8 h-8" /> ABORT_STREAM
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isOwner && !profileImagePreview && !coverImagePreview && (
+          <button 
+            onClick={() => coverImageInputRef.current?.click()}
+            className="absolute top-8 right-8 flex items-center justify-center bg-on-surface text-surface border-2 border-surface p-4 opacity-0 group-hover:opacity-100 transition-all z-20 shadow-brutal hover:scale-110 active:scale-95"
+            title="Update Cover Image"
+          >
+            <Camera className="w-8 h-8" />
+          </button>
+        )}
+
         {isEditing && (
           <button 
             onClick={() => coverImageInputRef.current?.click()}
@@ -621,7 +786,7 @@ export function Profile() {
                   <span className="bg-secondary border-2 border-on-surface px-4 py-1 text-on-surface font-bold text-sm uppercase italic shadow-brutal">{profile.founderType || 'Solo King'}</span>
                 )}
                 <span className="bg-primary border-2 border-on-surface px-4 py-1 text-on-surface font-bold text-sm uppercase italic shadow-brutal">{profile.connections?.length || 0} COMMUNITY_MEMBERS</span>
-                <span className="bg-tertiary border-2 border-on-surface px-4 py-1 text-on-surface font-bold text-sm uppercase italic shadow-brutal">LVL {Math.floor(Math.random() * 50) + 1}</span>
+                <span className="bg-tertiary border-2 border-on-surface px-4 py-1 text-on-surface font-bold text-sm uppercase italic shadow-brutal">LVL {profile.level || 1}</span>
               </div>
             </div>
           </div>
@@ -723,31 +888,33 @@ export function Profile() {
             </div>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="font-headline font-black text-2xl uppercase italic tracking-tighter text-on-surface">FOUNDER_MOMENTUM</h3>
+                <h3 className="font-headline font-black text-2xl uppercase italic tracking-tighter text-on-surface">NODE_VELOCITY</h3>
                 <Zap className="w-10 h-10 text-secondary fill-secondary" />
               </div>
               <div className="space-y-8">
                 <div>
                   <div className="flex justify-between text-[10px] font-bold uppercase italic mb-3 text-on-surface">
-                    <span>POWER_LEVEL</span>
-                    <span className="text-secondary">{profile.momentum || 85}%</span>
+                    <span>PROGRESS_TO_NEXT_LEVEL</span>
+                    <span className="text-secondary">{profile.xp || 0} XP</span>
                   </div>
-                  <div className="w-full h-10 bg-surface border-2 border-on-surface shadow-brutal overflow-hidden">
+                  <div className="w-full h-10 bg-surface border-2 border-on-surface shadow-brutal overflow-hidden p-1">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${profile.momentum || 85}%` }}
-                      className="h-full bg-secondary border-r-2 border-on-surface"
-                    />
+                      animate={{ width: `${Math.min(100, ((profile.xp || 0) % 1000) / 10)}%` }}
+                      className="h-full bg-secondary border-r-2 border-on-surface flex items-center justify-end px-2"
+                    >
+                       <span className="text-[10px] font-black text-on-surface uppercase italic">{(profile.xp || 0) % 1000}/1000</span>
+                    </motion.div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="bg-surface border-2 border-on-surface p-4 shadow-brutal">
-                    <p className="text-[8px] font-bold uppercase italic mb-1 text-on-surface-variant">ACTIVITY</p>
-                    <p className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">HIGH</p>
+                    <p className="text-[8px] font-bold uppercase italic mb-1 text-on-surface-variant">NODE_RANK</p>
+                    <p className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">{profile.level && profile.level > 20 ? 'ALPHA' : 'BETA'}</p>
                   </div>
                   <div className="bg-surface border-2 border-on-surface p-4 shadow-brutal">
-                    <p className="text-[8px] font-bold uppercase italic mb-1 text-on-surface-variant">IMPACT</p>
-                    <p className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">TOP_5%</p>
+                    <p className="text-[8px] font-bold uppercase italic mb-1 text-on-surface-variant">XP_TIER</p>
+                    <p className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">{Math.floor((profile.xp || 0) / 5000)}</p>
                   </div>
                 </div>
               </div>
@@ -855,11 +1022,30 @@ export function Profile() {
             ) : (
               <div className="flex flex-wrap gap-5">
                 {profile.skills?.length > 0 ? (
-                  profile.skills.map((skill, i) => (
-                    <span key={i} className="chip-pill text-on-surface font-bold text-lg uppercase italic border-outline/15">
-                      {skill}
-                    </span>
-                  ))
+                  profile.skills.map((skill, i) => {
+                    const endorsementCount = profile.endorsements?.[skill]?.length || 0;
+                    const hasEndorsed = profile.endorsements?.[skill]?.includes(currentUser?.uid || '');
+                    
+                    return (
+                      <div key={i} className="flex items-center">
+                        <span className="chip-pill text-on-surface font-bold text-lg uppercase italic border-outline/15 flex items-center gap-3">
+                          {skill}
+                          <div className="h-6 w-[1px] bg-outline/15" />
+                          <button 
+                            disabled={isOwner || !currentUser}
+                            onClick={() => handleToggleEndorsement(skill)}
+                            className={cn(
+                              "flex items-center gap-1 px-2 py-0.5 transition-all hover:scale-110",
+                              hasEndorsed ? "text-primary select-none" : "text-on-surface-variant hover:text-on-surface"
+                            )}
+                          >
+                             <Plus className={cn("w-4 h-4", hasEndorsed && "rotate-45")} />
+                             <span className="text-sm font-black">{endorsementCount}</span>
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase italic tracking-widest">NO_SKILLS_IN_THE_STASH.</p>
                 )}
@@ -1016,6 +1202,21 @@ export function Profile() {
                   <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-2 bg-primary -mb-[1px] z-10" />
                 )}
               </button>
+              {isOwner && (
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={cn(
+                    "flex items-center gap-4 pb-8 font-headline font-black text-xl uppercase italic tracking-tighter transition-all relative shrink-0",
+                    activeTab === 'settings' ? "text-on-surface" : "text-on-surface-variant hover:text-on-surface"
+                  )}
+                >
+                  <User className="w-8 h-8" />
+                  SETTINGS
+                  {activeTab === 'settings' && (
+                    <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-2 bg-on-surface -mb-[1px] z-10" />
+                  )}
+                </button>
+              )}
             </div>
 
             {activeTab === 'portfolio' && (
@@ -1222,6 +1423,59 @@ export function Profile() {
                       <p className="text-xl font-black uppercase italic text-on-surface-variant tracking-widest">WHAT_ARE_YOU_BUILDING_FOUNDER?</p>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'settings' && isOwner && (
+              <div className="space-y-16">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                  <h3 className="text-5xl font-headline font-black uppercase italic flex items-center gap-6 tracking-tighter text-on-surface">
+                    <User className="w-16 h-16 text-on-surface" /> ACCOUNT_CONTROLS
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                   <div className="bg-surface border-4 border-on-surface p-10 shadow-kinetic relative overflow-hidden group">
+                      <div className="absolute -right-8 -bottom-8 opacity-5 group-hover:rotate-12 transition-transform">
+                         <Target className="w-48 h-48" />
+                      </div>
+                      <h4 className="text-2xl font-black uppercase italic mb-6">IDENTITY_PROTOCOL</h4>
+                      <p className="text-on-surface-variant mb-10 font-bold italic">UPDATE_YOUR_GLOBAL_DISPLAY_AND_BIO_DATA.</p>
+                      <button 
+                        onClick={() => {
+                          setIsEditing(true);
+                          setEditForm(profile || {});
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="bg-on-surface text-surface border-2 border-on-surface px-8 py-4 font-black uppercase italic text-sm shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+                      >
+                         MODIFY_DNA
+                      </button>
+                   </div>
+
+                   <div className="bg-accent/10 border-4 border-on-surface p-10 shadow-kinetic relative overflow-hidden group">
+                      <div className="absolute -right-8 -bottom-8 opacity-5 group-hover:rotate-12 transition-transform">
+                         <Trash2 className="w-48 h-48" />
+                      </div>
+                      <h4 className="text-2xl font-black uppercase italic mb-6 text-accent">DESTRUCT_PROTOCOL</h4>
+                      <p className="text-on-surface-variant mb-10 font-bold italic">PURGE_ACCOUNT_AND_WIPE_ALL_TRACES_FROM_THE_STREAM.</p>
+                      <button 
+                        onClick={handleDeleteAccount}
+                        className="bg-accent text-on-accent border-2 border-on-surface px-8 py-4 font-black uppercase italic text-sm shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
+                      >
+                         INITIATE_WIPE
+                      </button>
+                   </div>
+                </div>
+
+                <div className="p-10 border-2 border-dashed border-on-surface/20 bg-surface-container-low">
+                   <h5 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                     <Bell className="w-3 h-3" /> TRANSMISSION_HISTORY
+                   </h5>
+                   <p className="text-[12px] font-bold italic text-on-surface-variant">
+                     SYSTEM_NOTIFICATION: ALL_CHANGES_ARE_SYNCED_WITH_A_CONFIRMATION_EMAIL_EMULATOR. YOU_WILL_RECEIVE_A_PULSE_ALERT_IN_THE_ECHO_STREAM_FOR_EVERY_ACTION.
+                   </p>
                 </div>
               </div>
             )}

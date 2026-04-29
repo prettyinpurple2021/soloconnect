@@ -236,6 +236,24 @@
       },
       "required": ["groupId", "userId", "title", "status", "createdAt"]
     },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "A founder opportunity or gig",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["hiring", "selling", "buying", "collaboration"] },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "budget": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "title", "description", "type", "createdAt"]
+    },
     "CheckIn": {
       "title": "CheckIn",
       "description": "An attendee check-in at an event",
@@ -315,6 +333,10 @@
     "activities/{activityId}": {
       "schema": { "$ref": "#/entities/Activity" },
       "description": "User activity logs"
+    },
+    "opportunities/{opportunityId}": {
+      "schema": { "$ref": "#/entities/Opportunity" },
+      "description": "Founder marketplace opportunities"
     }
   }
 }

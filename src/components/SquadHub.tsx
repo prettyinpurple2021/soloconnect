@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import { Target, Link as LinkIcon, Plus, Trash2, CheckCircle2, Circle, Trophy, Zap, ExternalLink } from 'lucide-react';
+import { Target, Link as LinkIcon, Plus, Trash2, CheckCircle2, Circle, Trophy, Zap, ExternalLink, Sparkles, Box } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
+import { generateMissionArtifact } from '../services/geminiService';
+import { addXP } from '../lib/reputation';
 
 interface GroupGoal {
   id: string;
@@ -14,6 +16,11 @@ interface GroupGoal {
   status: 'pending' | 'completed';
   createdBy: string;
   createdAt: any;
+  artifact?: {
+    code: string;
+    fragment: string;
+    vibe: string;
+  };
 }
 
 interface GroupResource {
@@ -107,11 +114,33 @@ export function SquadHub({ groupId, isMember, isAdmin }: SquadHubProps) {
   const toggleGoalStatus = async (goalId: string, currentStatus: string) => {
     if (!isAdmin) return;
     try {
+      const isCompleting = currentStatus !== 'completed';
       await updateDoc(doc(db, `groups/${groupId}/goals`, goalId), {
-        status: currentStatus === 'completed' ? 'pending' : 'completed'
+        status: isCompleting ? 'completed' : 'pending'
       });
+      
+      if (isCompleting && user) {
+        toast.success('GOAL_ACHIEVED. MOMENTUM_INCREASED.');
+        await addXP(user.uid, 'complete_mission');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'group goals');
+    }
+  };
+
+  const handleGenerateArtifact = async (goal: GroupGoal) => {
+    if (!isAdmin || goal.artifact) return;
+    
+    const toastId = toast.loading('SYNTHESIZING_ARTIFACT...');
+    try {
+      const artifact = await generateMissionArtifact(goal.title, goal.description);
+      await updateDoc(doc(db, `groups/${groupId}/goals`, goal.id), {
+        artifact
+      });
+      toast.success('ARTIFACT_MANIFESTED.', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('SYNTHESIS_FAILED.', { id: toastId });
     }
   };
 
@@ -195,6 +224,34 @@ export function SquadHub({ groupId, isMember, isAdmin }: SquadHubProps) {
                       {goal.title}
                     </h4>
                     <p className="text-xs font-bold text-on-surface-variant italic">{goal.description}</p>
+                    
+                    {goal.artifact && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mt-4 p-4 border-2 border-primary/30 bg-primary/5 flex items-center justify-between group/artifact"
+                      >
+                        <div className="flex items-center gap-4">
+                          <Box className="w-8 h-8 text-primary" />
+                          <div>
+                            <p className="text-[8px] font-black uppercase tracking-widest text-primary italic">ARTIFACT_CODE: {goal.artifact.code}</p>
+                            <p className="font-mono text-[10px] text-on-surface font-black">{goal.artifact.fragment}</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black uppercase italic px-2 py-0.5 bg-primary text-on-surface">
+                          {goal.artifact.vibe}
+                        </span>
+                      </motion.div>
+                    )}
+                    
+                    {goal.status === 'completed' && !goal.artifact && isAdmin && (
+                      <button
+                        onClick={() => handleGenerateArtifact(goal)}
+                        className="mt-4 text-[10px] font-black uppercase italic text-primary hover:text-accent flex items-center gap-2"
+                      >
+                        <Sparkles className="w-3 h-3" /> MINT_ARTIFACT
+                      </button>
+                    )}
                   </div>
                   {isAdmin && (
                     <button

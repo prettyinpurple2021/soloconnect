@@ -19,6 +19,7 @@ const Connections = lazy(() => import('./pages/Connections').then(m => ({ defaul
 const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar').then(m => ({ default: m.PersonalCalendar })));
 const Search = lazy(() => import('./pages/Search').then(m => ({ default: m.Search })));
 const FounderMatch = lazy(() => import('./pages/FounderMatch').then(m => ({ default: m.FounderMatch })));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
 const Terms = lazy(() => import('./pages/Terms').then(m => ({ default: m.Terms })));
 const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
 
@@ -28,6 +29,8 @@ const LoadingScreen = () => (
   </div>
 );
 
+const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })));
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isAuthReady } = useAuth();
 
@@ -36,11 +39,48 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 };
+
+function AppContent() {
+  const { user, isAuthReady } = useAuth();
+
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/" element={!user && isAuthReady ? <Landing /> : (user ? <Navigate to="/feed" replace /> : <LoadingScreen />)} />
+        <Route path="/login" element={user ? <Navigate to="/feed" replace /> : <Login />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route
+          path="/feed"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Feed />} />
+          <Route path="profile/:userId" element={<Profile />} />
+          <Route path="groups" element={<Groups />} />
+          <Route path="groups/:groupId" element={<GroupDetail />} />
+          <Route path="events" element={<Events />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="connections" element={<Connections />} />
+          <Route path="my-calendar" element={<PersonalCalendar />} />
+          <Route path="search" element={<Search />} />
+          <Route path="marketplace" element={<Marketplace />} />
+          <Route path="founder-match" element={<FounderMatch />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
 
 export default function App() {
   return (
@@ -49,33 +89,7 @@ export default function App() {
         <BrowserRouter>
           <Toaster position="top-center" />
           <SoloAssistant />
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <Layout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Feed />} />
-                <Route path="profile/:userId" element={<Profile />} />
-                <Route path="groups" element={<Groups />} />
-                <Route path="groups/:groupId" element={<GroupDetail />} />
-                <Route path="events" element={<Events />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="messages" element={<Messages />} />
-                <Route path="connections" element={<Connections />} />
-                <Route path="my-calendar" element={<PersonalCalendar />} />
-                <Route path="search" element={<Search />} />
-                <Route path="founder-match" element={<FounderMatch />} />
-              </Route>
-            </Routes>
-          </Suspense>
+          <AppContent />
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>

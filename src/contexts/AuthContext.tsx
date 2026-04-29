@@ -28,9 +28,16 @@ interface AuthContextType {
   userProfile: UserProfileData | null;
   loading: boolean;
   isAuthReady: boolean;
+  logOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, userProfile: null, loading: true, isAuthReady: false });
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
+  userProfile: null, 
+  loading: true, 
+  isAuthReady: false,
+  logOut: async () => {} 
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -69,6 +76,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
+
+            // Trigger simulated Welcome email transmission
+            try {
+              fetch('/api/confirm-action', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: currentUser.uid,
+                  action: 'account_creation',
+                  timestamp: Date.now()
+                })
+              });
+            } catch (e) {
+              console.warn('Welcome transmission failed.');
+            }
           }
 
           unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
@@ -93,8 +115,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const logOutUser = async () => {
+    const { logOut } = await import('../lib/firebase');
+    await logOut();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, isAuthReady }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, isAuthReady, logOut: logOutUser }}>
       {children}
     </AuthContext.Provider>
   );

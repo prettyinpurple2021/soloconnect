@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { logOut, db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { Home, User, Users, Calendar, LogOut, Briefcase, Bell, MessageSquare, CheckSquare, Trophy, Target, Sparkles, Search, Activity } from 'lucide-react';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { Home, User, Users, Calendar, LogOut, Briefcase, Bell, MessageSquare, CheckSquare, Trophy, Target, Sparkles, Search, Activity, Zap } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { OnboardingTour } from './OnboardingTour';
 import { ThemeToggle } from './ThemeToggle';
+import { CommandPalette } from './CommandPalette';
+import { toast } from 'react-hot-toast';
 
 export function Layout() {
   const { user } = useAuth();
@@ -31,13 +33,63 @@ export function Layout() {
   useEffect(() => {
     if (!user) return;
 
+    // We only want to show toasts for notifications that arrive AFTER the component has mounted
+    // so we don't spam the user with existing unread notifications.
+    const mountedAt = new Date();
+
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
-      where('read', '==', false)
+      where('read', '==', false),
+      orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+          
+          if (createdAt > mountedAt) {
+            toast.custom((t) => (
+              <motion.div
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className={cn(
+                  "bg-on-surface text-surface p-4 border-4 border-on-surface shadow-kinetic-active w-80 relative overflow-hidden",
+                  t.visible ? 'animate-enter' : 'animate-leave'
+                )}
+              >
+                <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 border-2 border-surface shrink-0 bg-secondary flex items-center justify-center">
+                    <Bell className="w-5 h-5 text-on-surface" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-primary italic mb-1">SYSTEM_PULSE_ALERT</p>
+                    <p className="text-[10px] font-black uppercase italic leading-tight text-surface">
+                      <span className="text-secondary">{data.sourceUserName}</span> {data.content}
+                    </p>
+                    <button 
+                      onClick={() => {
+                        toast.dismiss(t.id);
+                        navigate('/feed/notifications');
+                      }}
+                      className="mt-2 text-[8px] font-black uppercase italic text-accent hover:underline"
+                    >
+                      VIEW_ECHO_STREAM
+                    </button>
+                  </div>
+                  <button onClick={() => toast.dismiss(t.id)} className="text-surface/40 hover:text-surface">
+                    <LogOut className="w-4 h-4 rotate-45" /> {/* Close icon substitute */}
+                  </button>
+                </div>
+              </motion.div>
+            ), { duration: 5000 });
+          }
+        }
+      });
       setUnreadCount(snapshot.docs.length);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'notifications');
@@ -81,23 +133,25 @@ export function Layout() {
   };
 
   const navItems = [
-    { icon: Home, label: 'The Feed', path: '/' },
-    { icon: Sparkles, label: 'Founder Match', path: '/founder-match' },
-    { icon: Users, label: 'Founder Communities', path: '/groups' },
-    { icon: Calendar, label: 'Raves', path: '/events' },
-    { icon: MessageSquare, label: 'DMs', path: '/messages', badge: unreadMessagesCount },
-    { icon: Bell, label: 'Pings', path: '/notifications', badge: unreadCount },
+    { icon: Home, label: 'The Feed', path: '/feed' },
+    { icon: Briefcase, label: 'Exchange', path: '/feed/marketplace' },
+    { icon: Sparkles, label: 'Founder Match', path: '/feed/founder-match' },
+    { icon: Users, label: 'Founder Communities', path: '/feed/groups' },
+    { icon: Calendar, label: 'Raves', path: '/feed/events' },
+    { icon: MessageSquare, label: 'DMs', path: '/feed/messages', badge: unreadMessagesCount },
+    { icon: Bell, label: 'Pings', path: '/feed/notifications', badge: unreadCount },
   ];
 
   const commonNavItems = [
-    { icon: Briefcase, label: 'My Stash', path: `/profile/${user?.uid}` },
-    { icon: Users, label: 'Network', path: '/connections', badge: pendingConnectionsCount },
-    { icon: CheckSquare, label: 'My Timeline', path: '/my-calendar' },
+    { icon: User, label: 'My Stash', path: `/feed/profile/${user?.uid}` },
+    { icon: Users, label: 'Network', path: '/feed/connections', badge: pendingConnectionsCount },
+    { icon: CheckSquare, label: 'My Timeline', path: '/feed/my-calendar' },
   ];
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative">
       <div className="noise-overlay" aria-hidden="true" />
+      <CommandPalette />
       <OnboardingTour />
       
       {/* Iridescent Background Container */}
@@ -145,8 +199,13 @@ export function Layout() {
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
           </form>
-          <div className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest hidden xl:block">
-            SYS_STATUS: OPTIMAL // NODE: {user?.uid.slice(0, 8)}
+          <div className="font-mono text-[10px] text-on-surface-variant uppercase tracking-widest hidden xl:flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <span>SYS_PULSE: ACTIVE</span>
+            </div>
+            <div className="h-4 w-[1px] bg-outline/15" />
+            <span>NODE: {user?.uid.slice(0, 8)}</span>
           </div>
           <ThemeToggle />
           <button

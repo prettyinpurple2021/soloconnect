@@ -97,6 +97,39 @@ export const analyzePulse = async (stats: any): Promise<string> => {
   }
 };
 
+export const generateMissionArtifact = async (missionTitle: string, description: string): Promise<any> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `A founder just completed this mission: "${missionTitle}". Description: "${description}".
+      Generate a short (2-3 word) "Achievement Code" and a stylized "Code Fragment" (e.g., "0xDEADBEEF-CORE") that represents this build.
+      Return JSON: { "code": "Achievement Code", "fragment": "Code Fragment", "vibe": "One word to describe the energy (e.g. Kinetic, Brutal, Radiant)" }
+      Only return the JSON object.`,
+    });
+    const text = response.text || '{"code": "MISSION_COMPLETE", "fragment": "TRANS-001", "vibe": "Kinetic"}';
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(cleaned);
+  } catch (error) {
+    console.error("Artifact Error:", error);
+    return { code: "MISSION_COMPLETE", fragment: "TRANS-001", vibe: "Kinetic" };
+  }
+};
+
+export const suggestPostSpark = async (currentBuild: string): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `User is building: "${currentBuild}". 
+      Suggest a short, high-signal "spark" for a community post. 
+      It should be brief and inspire other founders. max 20 words.`,
+    });
+    return response.text || "Building in public is the ultimate synergy.";
+  } catch (error) {
+    console.error("Spark Error:", error);
+    return "Building in public is the ultimate synergy.";
+  }
+};
+
 export const suggestMatches = async (userProfile: any, otherUsers: any[]): Promise<string> => {
   try {
     const response = await ai.models.generateContent({
