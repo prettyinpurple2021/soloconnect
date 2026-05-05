@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, addDoc } from 'firebase/firestore';
 
 export interface UserProfileData {
   uid: string;
@@ -77,19 +77,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updatedAt: serverTimestamp(),
             });
 
-            // Trigger simulated Welcome email transmission
+            // Trigger account welcome notification pulse via Firebase Email Extension
             try {
-              fetch('/api/confirm-action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  userId: currentUser.uid,
-                  action: 'account_creation',
-                  timestamp: Date.now()
-                })
-              });
+              if (currentUser.email) {
+                addDoc(collection(db, 'mail'), {
+                  to: currentUser.email,
+                  message: {
+                    subject: '[SoloConnect] ACCOUNT_CREATION_CONFIRMED',
+                    html: `
+                      <div style="font-family: monospace; padding: 20px; background: #000; color: #fff; border: 2px solid #fff;">
+                        <h1 style="border-bottom: 2px solid #fff; padding-bottom: 10px;">SOLOCONNECT_PROTOCOL_CONFIRMED</h1>
+                        <p><strong>ACTION:</strong> account_creation</p>
+                        <p><strong>TIMESTAMP:</strong> ${new Date().toISOString()}</p>
+                        <p><strong>USER_ID:</strong> ${currentUser.uid}</p>
+                        <div style="margin-top: 20px; padding: 10px; border: 1px dashed #fff;">
+                          IDENTITY_ECHO_TRANSMITTED_SUCCESSFULLY_VIA_FIREBASE_EXTENSION.
+                        </div>
+                      </div>
+                    `
+                  }
+                }).catch(err => handleFirestoreError(err, OperationType.CREATE, 'mail'));
+              }
             } catch (e) {
-              console.warn('Welcome transmission failed.');
+              console.warn('Welcome transmission pulse failed.');
             }
           }
 

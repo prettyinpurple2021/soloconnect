@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // ===============================================================
+    // PILLAR 3: Global Safety Net & Guards
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // PILLAR 2: Hardened Helpers
+    // ===============================================================
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "prettyinpurple2021@gmail.com"
+      );
+    }
+
+    // ===============================================================
+    // Entity Validations
+    // ===============================================================
+    
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.createdAt == request.time &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+             (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+             (!('deleted' in data) || data.deleted is bool);
+    }
+    
+    function isValidPost(data) {
+      return data.keys().hasAll(['authorId', 'authorName', 'content', 'createdAt']) &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() <= 100 &&
+             data.content is string && data.content.size() <= 5000 &&
+             data.createdAt == request.time;
+    }
+
+    function isValidOpportunity(data) {
+      return data.keys().hasAll(['userId', 'userName', 'title', 'description', 'type', 'status', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 5000 &&
+             data.type in ['hiring', 'selling', 'buying', 'collaboration'] &&
+             data.status in ['open', 'closed'] &&
+             data.createdAt == request.time;
+    }
+
+    // ===============================================================
+    // Collection Match Blocks
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false; // Browsing all users raw is forbidden
+      
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().keys().size() <= 15;
+      
+      allow update: if isOwner(userId) && (
+        // Terminal state check: cannot resurrect
+        (!('deleted' in existing()) || existing().deleted == false) &&
+        (
+          // Action: Profile Update
+          (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'bio', 'location', 'photoURL', 'coverURL', 'skills', 'links', 'portfolio', 'goals', 'updatedAt']) && 
+           incoming().updatedAt == request.time) ||
+          // Action: Self-Purge
+          (incoming().diff(existing()).affectedKeys().hasOnly(['deleted', 'updatedAt']) && 
+           incoming().deleted == true && incoming().updatedAt == request.time) ||
+          // Action: Endorsements / Connections (Internal Sync)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['endorsements', 'connections', 'pendingConnections', 'sentRequests']))
+        )
+      );
+    }
+
+    match /opportunities/{oppId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidId(oppId) && isValidOpportunity(incoming());
+      
+      allow update: if isOwner(existing().userId) && (
+        // Action: Close
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && 
+         incoming().updatedAt == request.time) ||
+        // Action: Edit
+        (isValidOpportunity(incoming()) && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'type', 'tags', 'budget', 'updatedAt']) &&
+         incoming().updatedAt == request.time)
+      );
+      
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidId(postId) && isValidPost(incoming());
+      allow update: if (
+        (isOwner(existing().authorId) && isValidPost(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'images', 'tags', 'updatedAt'])) ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['commentCount']))
+      );
+      allow delete: if isOwner(existing().authorId) || isAdmin();
+    }
+
+    // ... additional matches for comments, chats, activities following same pattern
+  }
+}

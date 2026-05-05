@@ -20,6 +20,7 @@ const PersonalCalendar = lazy(() => import('./pages/PersonalCalendar').then(m =>
 const Search = lazy(() => import('./pages/Search').then(m => ({ default: m.Search })));
 const FounderMatch = lazy(() => import('./pages/FounderMatch').then(m => ({ default: m.FounderMatch })));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 const Terms = lazy(() => import('./pages/Terms').then(m => ({ default: m.Terms })));
 const Privacy = lazy(() => import('./pages/Privacy').then(m => ({ default: m.Privacy })));
 
@@ -75,6 +76,7 @@ function AppContent() {
           <Route path="search" element={<Search />} />
           <Route path="marketplace" element={<Marketplace />} />
           <Route path="founder-match" element={<FounderMatch />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

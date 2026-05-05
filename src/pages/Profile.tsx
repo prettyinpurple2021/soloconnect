@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, serverTimestamp, setDoc, limit } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, orderBy, arrayUnion, serverTimestamp, setDoc, limit, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { MapPin, Link as LinkIcon, Edit2, Briefcase, Calendar, Mail, Check, X, UserPlus, UserCheck, Activity, Image as ImageIcon, ExternalLink, Camera, Globe, Twitter, Linkedin, Github, MessageSquare, Zap, Ghost, Star, Trophy, Plus, Trash2, Target, User, Bell } from 'lucide-react';
 import { format } from 'date-fns';
@@ -416,19 +416,29 @@ export function Profile() {
 
       await updateDoc(doc(db, 'users', userId), updatedData);
 
-      // Trigger simulated confirmation email transmission
+      // Trigger account update confirmation email via Firebase Extension
       try {
-        await fetch('/api/confirm-action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId,
-            action: 'profile_update',
-            timestamp: Date.now()
-          })
-        });
+        if (profile?.email) {
+          addDoc(collection(db, 'mail'), {
+            to: profile.email,
+            message: {
+              subject: '[SoloConnect] PROFILE_UPDATE_CONFIRMED',
+              html: `
+                <div style="font-family: monospace; padding: 20px; background: #000; color: #fff; border: 2px solid #fff;">
+                  <h1 style="border-bottom: 2px solid #fff; padding-bottom: 10px;">SOLOCONNECT_PROTOCOL_CONFIRMED</h1>
+                  <p><strong>ACTION:</strong> profile_update</p>
+                  <p><strong>TIMESTAMP:</strong> ${new Date().toISOString()}</p>
+                  <p><strong>USER_ID:</strong> ${userId}</p>
+                  <div style="margin-top: 20px; padding: 10px; border: 1px dashed #fff;">
+                    IDENTITY_ECHO_TRANSMITTED_SUCCESSFULLY_VIA_FIREBASE_EXTENSION.
+                  </div>
+                </div>
+              `
+            }
+          }).catch(err => handleFirestoreError(err, OperationType.CREATE, 'mail'));
+        }
       } catch (e) {
-        console.warn('System Transmission failed, but profile synced.');
+        console.warn('Notification pulse failed, but profile synced.');
       }
       
       setProfile({ ...profile, ...updatedData } as UserProfile);
@@ -458,25 +468,38 @@ export function Profile() {
       onConfirm: async () => {
         const toastId = toast.loading('EXECUTING_PURGE...');
         try {
-          // Trigger simulated confirmation email transmission for deletion
-          await fetch('/api/confirm-action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: userId,
-              action: 'account_deletion',
-              timestamp: Date.now()
-            })
-          });
+          // Trigger account deletion confirmation email via Firebase Extension
+          try {
+            if (profile?.email) {
+              addDoc(collection(db, 'mail'), {
+                to: profile.email,
+                message: {
+                  subject: '[SoloConnect] ACCOUNT_DELETION_CONFIRMED',
+                  html: `
+                    <div style="font-family: monospace; padding: 20px; background: #000; color: #fff; border: 2px solid #fff;">
+                      <h1 style="border-bottom: 2px solid #fff; padding-bottom: 10px;">SOLOCONNECT_PROTOCOL_CONFIRMED</h1>
+                      <p><strong>ACTION:</strong> account_deletion</p>
+                      <p><strong>TIMESTAMP:</strong> ${new Date().toISOString()}</p>
+                      <p><strong>USER_ID:</strong> ${userId}</p>
+                      <div style="margin-top: 20px; padding: 10px; border: 1px dashed #fff;">
+                        IDENTITY_ECHO_TRANSMITTED_SUCCESSFULLY_VIA_FIREBASE_EXTENSION.
+                      </div>
+                    </div>
+                  `
+                }
+              }).catch(err => handleFirestoreError(err, OperationType.CREATE, 'mail'));
+            }
+          } catch (e) {
+            console.warn('Deletion notification pulse failed.');
+          }
 
-          // Delete the firestore document
+          // Mark document as deleted in Firestore
           await updateDoc(doc(db, 'users', userId), {
             deleted: true,
             updatedAt: serverTimestamp()
           });
 
-          // In a real app with Admin SDK, we'd delete the Auth user here too.
-          // For client-side simulation, we sign out and show a "DELETED" state.
+          // Sign out the user
           await logOut?.();
           toast.success('ACCOUNT_PURGED. FREEDOM_GAINED.', { id: toastId });
           navigate('/');
@@ -1471,10 +1494,10 @@ export function Profile() {
 
                 <div className="p-10 border-2 border-dashed border-on-surface/20 bg-surface-container-low">
                    <h5 className="text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                     <Bell className="w-3 h-3" /> TRANSMISSION_HISTORY
+                     <Bell className="w-3 h-3" /> NOTIFICATION_STREAM
                    </h5>
                    <p className="text-[12px] font-bold italic text-on-surface-variant">
-                     SYSTEM_NOTIFICATION: ALL_CHANGES_ARE_SYNCED_WITH_A_CONFIRMATION_EMAIL_EMULATOR. YOU_WILL_RECEIVE_A_PULSE_ALERT_IN_THE_ECHO_STREAM_FOR_EVERY_ACTION.
+                     SYSTEM_LOG: ALL_IDENTITY_CHANGES_TRIGGER_A_CONFIRMATION_PULSE_TO_YOUR_REGISTERED_EMAIL. MONITOR_YOUR_INBOX_FOR_PROTOCOL_ALERTS.
                    </p>
                 </div>
               </div>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, deleteDoc, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, deleteDoc, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users, MessageSquare } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users, MessageSquare, Search } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -52,6 +52,7 @@ export function Feed() {
   const [groups, setGroups] = useState<Record<string, Group>>({});
   const [newPost, setNewPost] = useState('');
   const [postTags, setPostTags] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -80,6 +81,43 @@ export function Feed() {
       label: 'COMMUNITY_PIONEER'
     }
   });
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+
+  useEffect(() => {
+    const searchFounders = async () => {
+      if (!userSearchQuery.trim()) {
+        setUserSearchResults([]);
+        return;
+      }
+
+      setIsSearchingUsers(true);
+      try {
+        const usersRef = collection(db, 'users');
+        // Batch fetch for local filtering in prototype
+        const snapshot = await getDocs(query(usersRef, limit(100)));
+        const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+        
+        const searchLower = userSearchQuery.toLowerCase();
+        const filtered = allUsers.filter(u => {
+          const nameMatch = u.displayName?.toLowerCase().includes(searchLower);
+          const bioMatch = u.bio?.toLowerCase().includes(searchLower);
+          const skillMatch = u.skills?.some((s: string) => s.toLowerCase().includes(searchLower));
+          return nameMatch || bioMatch || skillMatch;
+        });
+        
+        setUserSearchResults(filtered.filter(u => u.id !== user?.uid));
+      } catch (error) {
+        console.error("User Search Error:", error);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    };
+
+    const debounce = setTimeout(searchFounders, 300);
+    return () => clearTimeout(debounce);
+  }, [userSearchQuery, user?.uid]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -497,6 +535,17 @@ export function Feed() {
     );
   };
 
+  const handleAddCustomTag = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && customTag.trim()) {
+      e.preventDefault();
+      const tag = customTag.trim().toLowerCase().replace(/\s+/g, '_');
+      if (!postTags.includes(tag) && postTags.length < 10) {
+        setPostTags(prev => [...prev, tag]);
+      }
+      setCustomTag('');
+    }
+  };
+
   const filteredPosts = posts
     .filter(post => !userProfile?.blockedUsers?.includes(post.authorId))
     .filter(post => {
@@ -616,20 +665,46 @@ export function Feed() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase italic tracking-widest flex items-center gap-2">
                     <Sparkles className="w-3 h-3" /> DATA_TAGS
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {COMMON_TAGS.map(tag => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => togglePostTag(tag)}
-                        className={cn(
-                          "chip-pill border-2 border-transparent",
-                          postTags.includes(tag) && "chip-pill-active border-on-surface"
-                        )}
-                      >
-                        {tag}
-                      </button>
-                    ))}
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      {COMMON_TAGS.map(tag => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => togglePostTag(tag)}
+                          className={cn(
+                            "chip-pill border-2 border-transparent",
+                            postTags.includes(tag) && "chip-pill-active border-on-surface"
+                          )}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={customTag}
+                        onChange={(e) => setCustomTag(e.target.value)}
+                        onKeyDown={handleAddCustomTag}
+                        placeholder="ADD_CUSTOM_TAG + ENTER..."
+                        className="w-full bg-surface-container-lowest border-2 border-on-surface p-3 text-[10px] font-bold uppercase italic tracking-widest focus:outline-none focus:border-primary focus:shadow-brutal"
+                      />
+                      {postTags.filter(t => !COMMON_TAGS.includes(t)).length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {postTags.filter(t => !COMMON_TAGS.includes(t)).map(tag => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => togglePostTag(tag)}
+                              className="chip-pill-active border-2 border-on-surface flex items-center gap-2"
+                            >
+                              {tag} <X className="w-3 h-3" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -872,9 +947,19 @@ export function Feed() {
                   {post.tags && post.tags.length > 0 && (
                     <div className="flex flex-wrap gap-3">
                       {post.tags.map(tag => (
-                        <span key={tag} className="chip-pill text-[8px] px-2 py-0.5 border-2 border-on-surface/10">
+                        <button 
+                          key={tag} 
+                          onClick={() => {
+                            setFilterTag(tag);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className={cn(
+                            "chip-pill text-[8px] px-2 py-0.5 border-2 transition-all hover:bg-primary/20",
+                            filterTag === tag ? "border-primary bg-primary/10" : "border-on-surface/10"
+                          )}
+                        >
                           #{tag.toUpperCase()}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -1009,6 +1094,76 @@ export function Feed() {
 
         {/* Bento Sidebar */}
         <div className="xl:col-span-4 space-y-8">
+          {/* Founder Search Bento Card */}
+          <div className="bg-surface-container-low border-2 border-on-surface p-6 shadow-brutal relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+              <Search className="w-24 h-24 text-on-surface" />
+            </div>
+            <h3 className="text-xl font-headline font-black uppercase italic tracking-tighter text-on-surface mb-6 flex items-center gap-3">
+              FOUNDER_SEARCH <Search className="w-5 h-5 text-primary" />
+            </h3>
+            
+            <div className="relative mb-6">
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                placeholder="FIND_CITIZENS..."
+                className="w-full bg-surface-container-lowest border-2 border-on-surface p-4 pl-12 text-sm font-black uppercase italic tracking-widest focus:outline-none focus:bg-primary/5 focus:shadow-brutal transition-all"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant" />
+              {isSearchingUsers && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                   <div className="w-4 h-4 border-2 border-on-surface border-t-primary animate-spin" />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {userSearchResults.length > 0 ? (
+                userSearchResults.map((result) => (
+                  <motion.div
+                    key={result.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-4 bg-surface-container-lowest border-2 border-on-surface shadow-brutal hover:bg-secondary/10 transition-all flex items-center gap-4 group/item"
+                  >
+                    <Link to={`/feed/profile/${result.id}`} className="w-12 h-12 border-2 border-on-surface shrink-0 overflow-hidden group-hover/item:scale-110 transition-transform">
+                      <img 
+                        src={result.photoURL || `https://ui-avatars.com/api/?name=${result.displayName}`} 
+                        className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-all" 
+                        alt={result.displayName} 
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <Link to={`/feed/profile/${result.id}`} className="text-xs font-black uppercase italic truncate block hover:text-primary transition-colors">
+                        {result.displayName}
+                      </Link>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {result.skills?.slice(0, 2).map((skill: string) => (
+                          <span key={skill} className="text-[7px] font-bold uppercase italic bg-on-surface/5 px-1 py-0.5 border border-on-surface/10">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <button 
+                        onClick={() => navigate(`/messages?chat=${result.id}`)}
+                        className="p-2 border-2 border-on-surface bg-surface hover:bg-secondary transition-all shadow-brutal-sm active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+                       >
+                         <MessageSquare className="w-3 h-3" />
+                       </button>
+                    </div>
+                  </motion.div>
+                ))
+              ) : userSearchQuery.trim() && !isSearchingUsers ? (
+                <div className="text-center py-8 border-2 border-dashed border-on-surface/20">
+                  <p className="text-[10px] font-bold uppercase italic text-on-surface-variant">NO_NODES_FOUND</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
           {/* Trending Missions Bento Card */}
           <div className="glass-panel border-2 border-on-surface p-6 shadow-brutal relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-125 transition-transform">

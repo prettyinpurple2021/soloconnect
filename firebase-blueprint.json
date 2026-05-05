@@ -11,6 +11,8 @@
         "photoURL": { "type": "string" },
         "bio": { "type": "string" },
         "skills": { "type": "array", "items": { "type": "string" } },
+        "endorsements": { "type": "object" },
+        "deleted": { "type": "boolean" },
         "location": { "type": "string", "maxLength": 100 },
         "links": { "type": "object" },
         "portfolio": { "type": "array", "items": { "type": "object" } },
@@ -267,6 +269,23 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["eventId", "userId", "userName", "status", "createdAt"]
+    },
+    "Mail": {
+      "title": "Mail",
+      "description": "An email to be sent via the Trigger Email extension",
+      "type": "object",
+      "properties": {
+        "to": { "type": "string" },
+        "message": {
+          "type": "object",
+          "properties": {
+            "subject": { "type": "string" },
+            "html": { "type": "string" }
+          },
+          "required": ["subject", "html"]
+        }
+      },
+      "required": ["to", "message"]
     }
   },
   "firestore": {
@@ -337,6 +356,10 @@
     "opportunities/{opportunityId}": {
       "schema": { "$ref": "#/entities/Opportunity" },
       "description": "Founder marketplace opportunities"
+    },
+    "mail/{mailId}": {
+      "schema": { "$ref": "#/entities/Mail" },
+      "description": "Outbound email queue for Trigger Email extension"
     }
   }
 }
