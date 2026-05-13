@@ -1,216 +1,319 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router';
-import { Zap, Sparkles, Users, Activity, Globe, ArrowRight, Shield, Target } from 'lucide-react';
+import { Zap, Sparkles, Users, Activity, Globe, ArrowRight, Shield, Target, Cpu, Terminal, Share2, Search, Database, Lock } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-export function Landing() {
-  const features = [
-    {
-      icon: Sparkles,
-      title: "FOUNDER_DNA_MATCH",
-      description: "Our kinetic algorithm syncs you with partners whose execution speed matches your own.",
-      color: "bg-primary"
-    },
-    {
-      icon: Users,
-      title: "SQUAD_HUBS",
-      description: "Mission-driven micro-communities. no noise. just building. shared vaults and trackers.",
-      color: "bg-secondary"
-    },
-    {
-      icon: Activity,
-      title: "MOMENTUM_WAVE",
-      description: "Visualize your building pace. proving your path through execution, not just talk.",
-      color: "bg-tertiary"
-    }
-  ];
+const GridBackground = () => {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-20">
+      <div className="absolute inset-0 bg-[#000]" />
+      <div 
+        className="absolute inset-0" 
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255,172,228,0.1) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255,172,228,0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+        }}
+      />
+      <motion.div 
+        animate={{ 
+          y: ['0%', '100%'],
+          opacity: [0, 1, 0]
+        }}
+        transition={{ 
+          duration: 4, 
+          repeat: Infinity, 
+          ease: "linear" 
+        }}
+        className="absolute top-0 left-0 w-full h-[200px] bg-gradient-to-b from-transparent via-primary/20 to-transparent z-10"
+      />
+      <div className="absolute inset-0 bg-gradient-radial from-transparent to-black pointer-events-none" />
+    </div>
+  );
+};
 
-  const stats = [
-    { label: "FOUNDERS_SYNCED", value: "1.2K+" },
-    { label: "SQUAD_MISSIONS", value: "450+" },
-    { label: "DATA_STREAMS", value: "24/7" },
-  ];
+const SystemStatus = () => {
+  const [nodes, setNodes] = useState(0);
+  const [uptime, setUptime] = useState(99.999);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNodes(Math.floor(Math.random() * 50) + 900);
+      setUptime(99.99 + Math.random() * 0.009);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-surface-container-lowest selection:bg-primary selection:text-on-surface overflow-hidden">
-      {/* Noise Overlay */}
-      <div className="noise-overlay fixed inset-0 pointer-events-none opacity-5 z-50" />
+    <div className="p-8 border-2 border-on-surface bg-on-surface text-surface shadow-brutal-lg rotate-1 font-mono text-[10px] space-y-4">
+      <div className="flex justify-between items-center border-b border-surface/20 pb-2">
+        <span className="flex items-center gap-2 text-primary">
+          <Activity className="w-3 h-3" /> CORE_SYSTEM_STATUS
+        </span>
+        <span className="opacity-50">v4.2.0-STABLE</span>
+      </div>
       
-      {/* Fluid Background Decor */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[60%] bg-primary/20 blur-[120px] rounded-full animate-liquid opacity-30" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] bg-secondary/20 blur-[120px] rounded-full animate-liquid opacity-30" />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <p className="opacity-50 uppercase text-[8px]">Active_Nodes</p>
+          <p className="text-xl font-black">{nodes}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="opacity-50 uppercase text-[8px]">Network_Latency</p>
+          <p className="text-xl font-black">12ms</p>
+        </div>
       </div>
 
-      {/* Header */}
-      <nav className="fixed top-0 left-0 w-full z-40 p-6 sm:p-10 flex items-center justify-between backdrop-blur-xl border-b-2 border-on-surface/5">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 liquid-gradient border-2 border-on-surface shadow-brutal rotate-3 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-on-surface fill-current" />
-          </div>
-          <span className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">SOLOCONNECT</span>
+      <div className="h-1 w-full bg-surface/10 overflow-hidden relative">
+        <motion.div 
+          animate={{ x: ['-100%', '100%'] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          className="absolute inset-0 w-1/3 bg-secondary"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between items-center opacity-70">
+          <span>IDENTITY_PULSE</span>
+          <span className="text-primary">ENCRYPTED</span>
         </div>
-        <div className="hidden sm:flex items-center gap-8 text-[10px] font-black uppercase italic tracking-widest">
-           <a href="#vision" className="hover:text-primary transition-colors">THE_VISION</a>
-           <a href="#architecture" className="hover:text-secondary transition-colors">THE_ARCH</a>
-           <Link to="/login" className="bg-on-surface text-surface px-6 py-2 shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
-             ACCESS_CORE
-           </Link>
+        <div className="flex justify-between items-center opacity-70">
+          <span>MISSION_RELIABILITY</span>
+          <span className="text-secondary">{uptime.toFixed(3)}%</span>
+        </div>
+      </div>
+      
+      <div className="pt-2 border-t border-surface/20 flex gap-2">
+        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-[8px] opacity-70">REALTIME_EXECUTION_STREAM_ACTIVE</span>
+      </div>
+    </div>
+  );
+};
+
+export function Landing() {
+  return (
+    <div className="min-h-screen bg-[#050505] selection:bg-primary selection:text-[#050505] text-[#FAFAFA] relative overflow-x-hidden">
+      <GridBackground />
+      <div className="noise-overlay" />
+
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 w-full z-[100] p-6 lg:p-10 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-4 pointer-events-auto group cursor-crosshair">
+          <div className="w-10 h-10 border-2 border-primary bg-primary/10 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-12">
+            <Zap className="w-6 h-6 text-primary" />
+          </div>
+          <span className="text-2xl font-headline font-black uppercase italic tracking-tighter mix-blend-difference">SoloConnect</span>
+        </div>
+        
+        <div className="hidden lg:flex items-center gap-12 text-[10px] font-black uppercase italic tracking-[0.2em] pointer-events-auto">
+          <a href="#vision" className="hover:text-primary transition-colors">Vision</a>
+          <a href="#features" className="hover:text-secondary transition-colors">Protocol</a>
+          <Link to="/login" className="px-8 py-3 bg-primary text-black shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all">
+            Unlock_Core
+          </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-40 pb-20 px-6 sm:px-10 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="inline-block bg-accent text-on-accent border-2 border-on-surface px-4 py-1 text-[10px] font-black uppercase italic tracking-widest shadow-brutal-primary mb-8 rotate-[-1deg]">
-              SYSTEM_PROTOCOL_V4.2_ONLINE
-            </div>
-            <h1 className="text-7xl sm:text-9xl font-headline font-black text-on-surface leading-[0.85] uppercase italic tracking-[-0.05em] mb-12">
-              BUILDING_IS_<br />
-              <span className="text-transparent bg-clip-text liquid-gradient">SOLO.</span><br />
-              NOT_ALONE.
-            </h1>
-            <p className="text-xl sm:text-2xl text-on-surface-variant font-bold italic leading-relaxed max-w-xl mb-12">
-              The hyper-kinetic social protocol for solo-founders and high-signal builders. Sync with squads, track momentum, and deploy missions.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 items-center">
-              <Link to="/login" className="liquid-btn text-center text-xl py-6 px-10 flex items-center justify-center gap-4 group">
-                INFILTRATE_NOW <ArrowRight className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
-              </Link>
-              <Link to="/login" className="text-[10px] font-black uppercase italic tracking-widest text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
-                 EXISTING_NODE? ACCESS_CORE
-              </Link>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1, delay: 0.2 }}
-            className="relative"
-          >
-            {/* Aesthetic Mockup Placeholder */}
-            <div className="relative z-10 bg-surface border-4 border-on-surface shadow-brutal-lg p-4 rotate-2">
-              <div className="w-full h-8 flex items-center gap-2 border-b-2 border-on-surface px-4 mb-4">
-                 <div className="w-2 h-2 rounded-full bg-red-400" />
-                 <div className="w-2 h-2 rounded-full bg-yellow-400" />
-                 <div className="w-2 h-2 rounded-full bg-green-400" />
-              </div>
-              <div className="aspect-[4/5] bg-on-surface relative overflow-hidden">
-                 <div className="absolute inset-0 bg-gradient-to-br from-primary/40 to-secondary/40 animate-liquid" />
-                 <div className="p-8 relative">
-                    <div className="w-full h-4 bg-surface/20 rounded mb-4" />
-                    <div className="w-[80%] h-4 bg-surface/20 rounded mb-12" />
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="h-32 bg-surface/10 border-2 border-surface/20 rounded" />
-                       <div className="h-32 bg-surface/10 border-2 border-surface/20 rounded" />
-                    </div>
-                    <div className="mt-8 p-4 border-2 border-primary/40 bg-surface/5 backdrop-blur-md">
-                       <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full border-2 border-primary bg-primary/20" />
-                          <div className="space-y-1">
-                             <div className="w-24 h-2 bg-primary/40 rounded" />
-                             <div className="w-16 h-2 bg-primary/20 rounded" />
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-            </div>
-            {/* Decor squares */}
-            <div className="absolute top-[-20px] left-[-20px] w-24 h-24 bg-accent/20 border-2 border-on-surface -z-10 rotate-12" />
-            <div className="absolute bottom-[-20px] right-[-20px] w-32 h-32 bg-tertiary/20 border-2 border-on-surface -z-10 -rotate-12" />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Stats Ticker */}
-      <section className="bg-on-surface py-12 relative">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 flex flex-wrap justify-between items-center gap-12">
-          {stats.map((stat, i) => (
-            <div key={i}>
-              <p className="text-5xl font-headline font-black text-surface italic tracking-tighter uppercase mb-1">{stat.value}</p>
-              <p className="text-[10px] font-black text-primary uppercase tracking-widest italic">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features Grid */}
-      <section className="py-32 px-6 sm:px-10 max-w-7xl mx-auto">
-        <div className="text-center mb-24">
-          <h2 className="text-5xl sm:text-7xl font-headline font-black text-on-surface uppercase italic tracking-tighter mb-4 translate-x-[-20px]">
-            SYSTEM_CAPABILITIES
-          </h2>
-          <div className="h-1 w-40 liquid-gradient mx-auto" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          {features.map((feature, i) => (
+      <main className="relative z-10 pt-32 lg:pt-0 min-h-screen flex flex-col justify-center px-6 lg:px-20 max-w-[1800px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+          
+          <div className="lg:col-span-8 space-y-12">
             <motion.div
-              key={i}
-              whileHover={{ y: -10, rotate: 1 }}
-              className="glass-panel border-2 border-on-surface p-10 shadow-brutal group relative h-full"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
             >
-              <div className={cn("inline-flex w-16 h-16 items-center justify-center border-2 border-on-surface mb-8 shadow-brutal rotate-3 group-hover:rotate-12 transition-transform", feature.color)}>
-                <feature.icon className="w-8 h-8 text-on-surface" />
+              <div className="inline-flex items-center gap-3 px-3 py-1 bg-secondary/10 border border-secondary/20 text-secondary text-[10px] font-mono mb-8 uppercase tracking-widest">
+                <Terminal className="w-3 h-3" /> Initializing_Social_Protocol_v4
               </div>
-              <h3 className="text-2xl font-headline font-black text-on-surface uppercase italic tracking-tight mb-4">{feature.title}</h3>
-              <p className="text-lg text-on-surface-variant font-bold italic leading-relaxed">
-                {feature.description}
-              </p>
+              
+              <h1 
+                className="text-7xl md:text-[clamp(4rem,10vw,12rem)] font-headline font-black leading-[0.82] uppercase italic tracking-tighter"
+                style={{ wordBreak: 'break-word' }}
+              >
+                <motion.span 
+                  initial={{ x: -100, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring" }}
+                  className="block relative glitch-effect"
+                  data-text="Building."
+                >
+                  Building.
+                </motion.span>
+                <motion.span 
+                  initial={{ x: -100, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.3, type: "spring" }}
+                  className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-tertiary glitch-effect"
+                  data-text="Unfiltered."
+                >
+                  Unfiltered.
+                </motion.span>
+                <motion.span 
+                  initial={{ x: -100, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.4, type: "spring" }}
+                  className="block relative"
+                >
+                  Unstoppable.
+                </motion.span>
+              </h1>
             </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-col md:flex-row gap-10 items-start md:items-center"
+            >
+              <p className="max-w-md text-xl lg:text-2xl font-bold italic text-white/60 border-l-4 border-primary pl-8">
+                The hyper-kinetic social protocol engineered for elite solo-founders. No noise. Just execution.
+              </p>
+              
+              <div className="flex gap-4">
+                <Link to="/login" className="p-8 bg-white text-black group relative overflow-hidden flex items-center gap-4 transition-all hover:bg-primary hover:text-black">
+                  <span className="text-2xl font-headline font-black uppercase italic relative z-10 transition-transform group-hover:scale-95">GO_PRO</span>
+                  <ArrowRight className="w-8 h-8 relative z-10 transform group-hover:translate-x-4 transition-all" />
+                  <div className="absolute inset-0 bg-primary translate-x-[-101%] group-hover:translate-x-0 transition-transform duration-300" />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="lg:col-span-4 lg:block hidden">
+            <motion.div
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
+              className="relative"
+            >
+              <SystemStatus />
+              
+              {/* Decorative Tech Elements */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 border-2 border-dashed border-secondary/20 rounded-full animate-spin-slow" />
+              <div className="absolute -bottom-20 -left-10 text-[180px] font-black text-white/5 pointer-events-none select-none z-[-1]">
+                CORE
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </main>
+
+      {/* Marquee Section */}
+      <div className="py-20 border-y-2 border-white/10 overflow-hidden bg-[#0a0a0a] relative z-10">
+        <div className="flex animate-marquee whitespace-nowrap gap-20">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex gap-20 items-center text-4xl lg:text-6xl font-headline font-black italic uppercase tracking-tighter opacity-20">
+              <span>Mission_First</span>
+              <Cpu className="w-12 h-12 text-primary" />
+              <span>Zero_Noise</span>
+              <Zap className="w-12 h-12 text-secondary" />
+              <span>High_Execution</span>
+              <Activity className="w-12 h-12 text-tertiary" />
+            </div>
           ))}
+        </div>
+      </div>
+
+      {/* Features - Protocol Specs */}
+      <section id="features" className="relative z-10 py-40 px-6 lg:px-20 max-w-[1800px] mx-auto bg-black">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
+          <div className="space-y-12">
+            <h2 className="text-6xl lg:text-8xl font-headline font-black leading-tight uppercase italic tracking-tighter">
+              PROTOCOL_<br/>ARCHITECTURE
+            </h2>
+            <p className="text-xl lg:text-2xl font-bold italic text-white/60">
+              Stripped of consumer-grade fillers. SoloConnect implements a low-latency, mission-centric architectural layer for builders who don't have time for social fluff.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {[
+              { icon: Database, label: "SHARED_VAULTS", desc: "Decentralized knowledge hubs for your squad." },
+              { icon: Lock, label: "ENCRYPTED_COMMS", desc: "Military-grade end-to-end mission briefing." },
+              { icon: Share2, label: "DYNAMO_SYNC", desc: "Proprietary algorithm matching builder speed." },
+              { icon: Search, label: "NODE_DISCOVERY", desc: "Zero-noise search across the founder sphere." },
+            ].map((spec, i) => (
+              <div key={i} className="p-10 border-2 border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all group flex flex-col justify-between h-80">
+                <spec.icon className="w-12 h-12 text-primary opacity-50 group-hover:opacity-100 transition-opacity" />
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-headline font-black italic">{spec.label}</h3>
+                  <p className="text-sm font-bold text-white/40">{spec.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Vision Section */}
-      <section id="vision" className="py-32 bg-on-surface text-surface relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center pointer-events-none opacity-[0.03]">
-          <h2 className="text-[30rem] font-headline font-black italic select-none">BUILD</h2>
-        </div>
-        <div className="max-w-4xl mx-auto px-6 sm:px-10 text-center relative z-10">
-          <div className="inline-flex w-20 h-20 items-center justify-center bg-tertiary border-2 border-surface shadow-brutal-primary mb-12 rotate-[-12deg]">
-            <Shield className="w-10 h-10 text-on-surface" />
+      {/* Core manifesto */}
+      <section id="vision" className="relative z-10 min-h-screen flex items-center justify-center bg-primary text-black px-6">
+        <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-[#050505] to-transparent z-0" />
+        
+        <div className="max-w-4xl mx-auto text-center relative z-10 space-y-20">
+          <div className="inline-block p-10 border-4 border-black bg-white shadow-brutal-lg rotate-3 mb-10">
+             <Shield className="w-20 h-20 text-black mx-auto" />
           </div>
-          <h2 className="text-5xl sm:text-7xl font-headline font-black uppercase italic tracking-tighter mb-12">
-            THE_NEO_BRUTALIST_ETHOS
+          
+          <h2 className="text-6xl md:text-9xl font-headline font-black leading-[0.82] uppercase italic tracking-tighter">
+            Manifesto of the<br/>Execution_Class
           </h2>
-          <p className="text-2xl font-bold italic leading-relaxed text-surface/80">
-            Social networking is broken. It's built for consumption, not creation. SoloConnect is the response. 
-            We strip away the noise and focus on the atoms of building: missions, squads, and momentum. 
-            It's not about the profile, it's about the transmission.
+          
+          <p className="text-2xl md:text-4xl font-headline font-black leading-tight italic tracking-tight">
+            "We build in silence while the crowd screams. SoloConnect is the transmission tower for the builders who reject the vanity mirror of social media."
           </p>
-          <div className="mt-20">
-            <Link to="/login" className="bg-primary text-on-surface text-2xl font-black uppercase italic px-12 py-6 border-2 border-surface shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all inline-block">
-              JOIN_THE_MANIFESTO
+          
+          <div className="pt-10">
+            <Link to="/login" className="px-16 py-8 bg-black text-white text-2xl font-headline font-black uppercase italic shadow-brutal hover:shadow-none hover:translate-x-2 hover:translate-y-2 transition-all">
+              Join_the_Protocol
             </Link>
           </div>
         </div>
       </section>
 
-      {/* CTA Footer */}
-      <footer className="py-20 px-6 sm:px-10 border-t-2 border-on-surface/10 bg-surface">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <Zap className="w-8 h-8 text-primary fill-current" />
-              <span className="text-3xl font-headline font-black uppercase italic tracking-tighter">SOLOCONNECT</span>
+      {/* Footer */}
+      <footer className="relative z-10 p-10 lg:p-20 border-t-2 border-white/5 font-mono text-[10px] bg-black">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-20">
+          <div className="space-y-6 max-w-sm">
+            <div className="flex items-center gap-3">
+              <Zap className="w-8 h-8 text-primary" />
+              <span className="text-3xl font-headline font-black italic">SoloConnect</span>
             </div>
-            <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest italic tracking-tighter">
-              &copy; 2026_PROTOCOL_X. ALL_RIGHTS_RESERVED.
+            <p className="opacity-50 font-bold leading-relaxed">
+              OPERATING_SYSTEM_FOR_THE_NEW_ECONOMY. 
+              DESIGNED_BY_FOUNDERS_FOR_FOUNDERS.
+              NO_ALGORITHMS. NO_ADS. NO_LIES.
             </p>
           </div>
-          <div className="flex flex-wrap gap-8 text-[10px] font-black uppercase italic tracking-widest">
-            <Link to="/terms" className="hover:text-primary transition-colors">TERMS_OF_SERVICE</Link>
-            <Link to="/privacy" className="hover:text-primary transition-colors">PRIVACY_PROTOCOL</Link>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">TWITTER_TRANSMISSION</a>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-20">
+            <div className="space-y-4">
+              <p className="opacity-30 uppercase tracking-[0.2em]">Network</p>
+              <ul className="space-y-2 font-bold uppercase transition-all">
+                <li><a href="#" className="hover:text-primary transition-colors">Manifesto</a></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Architecture</a></li>
+                <li><a href="#" className="hover:text-primary transition-colors">Protocol_Docs</a></li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <p className="opacity-30 uppercase tracking-[0.2em]">Social</p>
+              <ul className="space-y-2 font-bold uppercase">
+                <li><a href="#" className="hover:text-secondary transition-colors">Transmission_X</a></li>
+                <li><a href="#" className="hover:text-secondary transition-colors">Discord_Server</a></li>
+                <li><a href="#" className="hover:text-secondary transition-colors">GitHub_Logs</a></li>
+              </ul>
+            </div>
           </div>
+        </div>
+        
+        <div className="mt-40 pt-10 border-t border-white/5 flex justify-between items-center opacity-30 font-bold uppercase tracking-widest">
+           <span>© 2026_SOLOCONNECT_CORE</span>
+           <span>EST_LOCAL_SYSTEM: 40.7128° N, 74.0060° W</span>
         </div>
       </footer>
     </div>

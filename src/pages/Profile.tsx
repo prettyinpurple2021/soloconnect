@@ -149,6 +149,7 @@ export function Profile() {
 
   const isOwner = currentUser?.uid === userId;
   const isConnected = currentUserProfile?.connections?.includes(userId || '');
+  const isAdminUser = currentUser?.email === "prettyinpurple2021@gmail.com";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -157,8 +158,13 @@ export function Profile() {
         const docRef = doc(db, 'users', userId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setProfile(docSnap.data() as UserProfile);
-          setEditForm(docSnap.data() as UserProfile);
+          const data = docSnap.data() as UserProfile;
+          // PII Isolation: Merge email if owner (public doc no longer has it)
+          if (userId === currentUser?.uid && currentUser?.email && !data.email) {
+            data.email = currentUser.email;
+          }
+          setProfile(data);
+          setEditForm(data);
         }
 
         // Fetch activities for momentum wave
@@ -985,12 +991,16 @@ export function Profile() {
                   )}
                 </div>
               </div>
-              <div className="flex items-start gap-8 text-lg font-black uppercase italic text-on-surface">
-                <div className="p-3 bg-primary border-2 border-on-surface shadow-brutal shrink-0">
-                  <Mail className="w-8 h-8 text-on-surface" />
+              {(profile.email || isOwner) && (
+                <div className="flex items-start gap-8 text-lg font-black uppercase italic text-on-surface">
+                  <div className="p-3 bg-primary border-2 border-on-surface shadow-brutal shrink-0">
+                    <Mail className="w-8 h-8 text-on-surface" />
+                  </div>
+                  <span className="lowercase tracking-tighter pt-3 break-all">
+                    {isOwner ? currentUser?.email : (isAdminUser ? profile.email : 'PII_REDACTED_FOR_PRIVACY')}
+                  </span>
                 </div>
-                <span className="lowercase tracking-tighter pt-3 break-all">{profile.email}</span>
-              </div>
+              )}
               <div className="flex items-start gap-8 text-lg font-black uppercase italic text-on-surface">
                 <div className="p-3 bg-tertiary border-2 border-on-surface shadow-brutal shrink-0">
                   <Calendar className="w-8 h-8 text-on-surface" />

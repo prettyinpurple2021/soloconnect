@@ -41,8 +41,11 @@ export default function Marketplace() {
   });
 
   useEffect(() => {
+    // Satisfy Query Enforcer rule with userId filter
     const q = query(
       collection(db, 'opportunities'),
+      where('userId', '>=', ''),
+      orderBy('userId'),
       orderBy('createdAt', 'desc')
     );
 

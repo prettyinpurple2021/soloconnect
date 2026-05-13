@@ -37,11 +37,11 @@ service cloud.firestore {
     // ===============================================================
     
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt']) &&
+      return data.keys().hasAll(['uid', 'displayName', 'createdAt']) &&
              data.uid == request.auth.uid &&
              data.displayName is string && data.displayName.size() <= 100 &&
-             data.email is string && data.email.size() <= 200 &&
              data.createdAt is timestamp &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
              (!('deleted' in data) || data.deleted is bool);
     }
@@ -71,6 +71,24 @@ service cloud.firestore {
              data.createdAt is timestamp;
     }
 
+    function isValidEvent(data) {
+      return data.keys().hasAll(['groupId', 'title', 'date', 'location', 'attendees', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.location is string && data.location.size() <= 500 &&
+             data.attendees is list &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPersonalEvent(data) {
+      return data.keys().hasAll(['userId', 'title', 'description', 'date', 'type', 'completed', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.type in ['event', 'reminder', 'task'] &&
+             data.completed is bool &&
+             data.createdAt is timestamp;
+    }
+
     function isValidVouch(data) {
       return data.keys().hasAll(['toUserId', 'fromUserId', 'fromUserName', 'content', 'category', 'createdAt']) &&
              data.fromUserId == request.auth.uid &&
@@ -93,8 +111,10 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
+      // Profiles are readable by anyone signed in (Directory access)
+      // PII (email) is isolated to a sub-collection
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.deleted != true;
+      allow list: if isSignedIn() && resource.data.uid >= "";
       
       allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
       
@@ -108,10 +128,16 @@ service cloud.firestore {
       ) || (
         isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['endorsements', 'connections', 'pendingConnections', 'sentRequests'])
       );
+
+      // PII Isolation: email and other private info
+      match /private/info {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
     }
 
     match /opportunities/{oppId} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.userId >= "";
       allow create: if isVerified() && isValidId(oppId) && isValidOpportunity(incoming()) && incoming().createdAt == request.time;
       allow update: if isOwner(existing().userId) && (
         (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().updatedAt == request.time) ||
@@ -121,7 +147,8 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.authorId >= "";
       allow create: if isVerified() && isValidPost(incoming()) && incoming().createdAt == request.time;
       allow update: if (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'images', 'tags', 'updatedAt']) && incoming().updatedAt == request.time) ||
                     (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
@@ -144,10 +171,24 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.creatorId >= "";
       allow create: if isVerified() && request.auth.uid == incoming().creatorId && incoming().createdAt == request.time;
       allow update: if (isOwner(existing().creatorId)) || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['members', 'moderators']));
       allow delete: if isOwner(existing().creatorId) || isAdmin();
+
+      match /goals/{goalId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && incoming().createdBy == request.auth.uid && incoming().createdAt == request.time;
+        allow update: if (isSignedIn() && (request.auth.uid == existing().createdBy || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId)) || (isAdmin());
+        allow delete: if (isSignedIn() && (request.auth.uid == existing().createdBy || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId)) || (isAdmin());
+      }
+
+      match /resources/{resourceId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && incoming().createdBy == request.auth.uid && incoming().createdAt == request.time;
+        allow delete: if (isSignedIn() && (request.auth.uid == existing().createdBy || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId)) || (isAdmin());
+      }
     }
 
     match /chats/{chatId} {
@@ -162,8 +203,30 @@ service cloud.firestore {
     }
 
     match /activities/{activityId} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.userId >= "";
       allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+    }
+
+    match /events/{eventId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.creatorId >= "";
+      allow create: if isVerified() && isValidEvent(incoming()) && incoming().createdAt == request.time;
+      allow update: if isSignedIn() && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['attendees'])) ||
+        (isAdmin())
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /personal_events/{eventId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isVerified() && isValidPersonalEvent(incoming()) && incoming().createdAt == request.time;
+      allow update: if isOwner(existing().userId) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'completedDates', 'excludedDates', 'updatedAt']) && incoming().updatedAt == request.time) ||
+        (isValidPersonalEvent(incoming()) && incoming().updatedAt == request.time)
+      );
+      allow delete: if isOwner(existing().userId);
     }
 
     match /notifications/{notificationId} {

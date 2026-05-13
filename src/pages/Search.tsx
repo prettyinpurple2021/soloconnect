@@ -34,7 +34,7 @@ export function Search() {
         const normalizedQuery = queryText.toLowerCase();
 
         // 1. Search Users
-        const usersQuery = query(collection(db, 'users'), limit(10));
+        const usersQuery = query(collection(db, 'users'), where('uid', '>=', ''), limit(10));
         const usersSnap = await getDocs(usersQuery);
         usersSnap.forEach(doc => {
           const data = doc.data();

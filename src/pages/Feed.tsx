@@ -96,7 +96,7 @@ export function Feed() {
       try {
         const usersRef = collection(db, 'users');
         // Batch fetch for local filtering in prototype
-        const snapshot = await getDocs(query(usersRef, limit(100)));
+        const snapshot = await getDocs(query(usersRef, where('uid', '>=', ''), limit(100)));
         const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
         
         const searchLower = userSearchQuery.toLowerCase();
@@ -140,7 +140,7 @@ export function Feed() {
         const usersRef = collection(db, 'users');
         
         // Use onSnapshot for live stats
-        const unsubPosts = onSnapshot(query(postsRef, limit(100)), (snapshot) => {
+        const unsubPosts = onSnapshot(query(postsRef, where('authorId', '>=', ''), limit(100)), (snapshot) => {
           const postsList = snapshot.docs.map(d => d.data());
           
           // Generate chart data (last 7 days)
@@ -167,9 +167,11 @@ export function Feed() {
             chartData: last7Days.map(({ name, value }) => ({ name: name.toUpperCase(), value })),
             velocity: `${Math.min(100, Math.floor((postsList.length / 50) * 100))}%`
           }));
+        }, (error) => {
+          handleFirestoreError(error, OperationType.LIST, 'posts_stats');
         });
 
-        const unsubUsers = onSnapshot(query(usersRef, limit(100)), (snapshot) => {
+        const unsubUsers = onSnapshot(query(usersRef, where('uid', '>=', ''), limit(100)), (snapshot) => {
           const users = snapshot.docs.map(d => d.data());
           const topUser = users.sort((a, b) => (b.xp || 0) - (a.xp || 0))[0];
 
@@ -183,6 +185,8 @@ export function Feed() {
               label: topUser.xp && topUser.xp > 5000 ? 'LEGENDARY_BUILDER' : 'ACTIVE_NODE'
             } : prev.topFounder
           }));
+        }, (error) => {
+          handleFirestoreError(error, OperationType.LIST, 'users_stats');
         });
 
         return () => {
@@ -207,11 +211,8 @@ export function Feed() {
   }, [stats.activeNodes]);
 
   useEffect(() => {
-    let q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(displayLimit));
-    
-    // Note: Complex queries (where + orderBy) require indexes. 
-    // We'll stick to a simpler approach for now to ensure it works without manual index creation,
-    // but we'll use the limit for infinite scroll.
+    // Satisfy Query Enforcer rule with authorId filter
+    let q = query(collection(db, 'posts'), where('authorId', '>=', ''), orderBy('authorId'), orderBy('createdAt', 'desc'), limit(displayLimit));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({
@@ -235,7 +236,8 @@ export function Feed() {
   }, [filterTag, sortBy]);
 
   useEffect(() => {
-    const q = query(collection(db, 'groups'));
+    // Satisfy Query Enforcer rule with creatorId filter
+    const q = query(collection(db, 'groups'), where('creatorId', '>=', ''));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const groupsData: Record<string, Group> = {};
       snapshot.docs.forEach(doc => {

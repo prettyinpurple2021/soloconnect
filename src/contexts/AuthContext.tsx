@@ -59,10 +59,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userSnap = await getDoc(userRef);
           
           if (!userSnap.exists()) {
-            await setDoc(userRef, {
+            const profileData = {
               uid: currentUser.uid,
               displayName: currentUser.displayName || 'Anonymous User',
-              email: currentUser.email,
               photoURL: currentUser.photoURL || '',
               bio: '',
               skills: [],
@@ -75,7 +74,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               savedPosts: [],
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
-            });
+            };
+
+            await setDoc(userRef, profileData);
+
+            // Pillar 6: PII Isolation - store email in private subcollection
+            if (currentUser.email) {
+              await setDoc(doc(db, 'users', currentUser.uid, 'private', 'info'), {
+                email: currentUser.email,
+                updatedAt: serverTimestamp()
+              });
+            }
 
             // Trigger account welcome notification pulse via Firebase Email Extension
             try {
@@ -105,7 +114,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           unsubscribeProfile = onSnapshot(userRef, (docSnap) => {
             if (docSnap.exists()) {
-              setUserProfile(docSnap.data() as UserProfileData);
+              const data = docSnap.data() as UserProfileData;
+              // PII Isolation: Merge email from current authenticated user if not in public doc
+              if (!data.email && currentUser.email) {
+                data.email = currentUser.email;
+              }
+              setUserProfile(data);
             }
           }, (error) => {
             handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);

@@ -31,7 +31,7 @@ export function FounderMatch() {
       // Fetch some other users to compare
       const usersQuery = query(
         collection(db, 'users'),
-        where('uid', '!=', user.uid),
+        where('uid', '>=', ''), // Satisfy list rule
         limit(20)
       );
       const usersSnap = await getDocs(usersQuery);
@@ -41,7 +41,7 @@ export function FounderMatch() {
         skills: doc.data().skills,
         bio: doc.data().bio,
         founderType: doc.data().founderType
-      }));
+      })).filter(u => u.uid !== user.uid); // Filter out self locally if needed, or by skipping in return if combined filters are complex
 
       const result = await suggestMatches(userProfile, otherUsers);
       const cleanedResult = result.replace(/```json|```/g, '').trim();

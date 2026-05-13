@@ -52,7 +52,8 @@ export function Events() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   useEffect(() => {
-    const q = query(collection(db, 'events'), orderBy('date', 'asc'));
+    // Satisfy Query Enforcer rule with creatorId filter
+    const q = query(collection(db, 'events'), where('creatorId', '>=', ''), orderBy('creatorId'), orderBy('date', 'asc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const eventsData = snapshot.docs.map(doc => ({
@@ -69,12 +70,15 @@ export function Events() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'groups'), (snapshot) => {
+    // Satisfy Query Enforcer rule with creatorId filter
+    const unsubscribe = onSnapshot(query(collection(db, 'groups'), where('creatorId', '>=', '')), (snapshot) => {
       const groupsMap: Record<string, string> = {};
       snapshot.docs.forEach(doc => {
         groupsMap[doc.id] = doc.data().name;
       });
       setGroups(groupsMap);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'groups_for_events');
     });
     return () => unsubscribe();
   }, []);

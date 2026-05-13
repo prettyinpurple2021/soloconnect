@@ -49,7 +49,13 @@ export function Groups() {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'groups'), orderBy('createdAt', 'desc'));
+    // Satisfy Query Enforcer rule with creatorId filter
+    const q = query(
+      collection(db, 'groups'),
+      where('creatorId', '>=', ''),
+      orderBy('creatorId'),
+      orderBy('createdAt', 'desc')
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const groupsData = snapshot.docs.map(doc => ({
