@@ -51,7 +51,7 @@ export function Search() {
         });
 
         // 2. Search Groups
-        const groupsQuery = query(collection(db, 'groups'), limit(10));
+        const groupsQuery = query(collection(db, 'groups'), where('creatorId', '>=', ''), limit(10));
         const groupsSnap = await getDocs(groupsQuery);
         groupsSnap.forEach(doc => {
           const data = doc.data();
@@ -67,7 +67,7 @@ export function Search() {
         });
 
         // 3. Search Posts
-        const postsQuery = query(collection(db, 'posts'), limit(10));
+        const postsQuery = query(collection(db, 'posts'), where('authorId', '>=', ''), limit(10));
         const postsSnap = await getDocs(postsQuery);
         postsSnap.forEach(doc => {
           const data = doc.data();

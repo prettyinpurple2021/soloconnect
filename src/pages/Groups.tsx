@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, getDocs, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Users, Plus, Search, Users2, Calendar, MapPin, X, Camera, Edit2, UserCheck, Sparkles } from 'lucide-react';
@@ -64,7 +64,9 @@ export function Groups() {
       })) as Group[];
       setGroups(groupsData);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'groups');
+      if (auth.currentUser) {
+        handleFirestoreError(error, OperationType.LIST, 'groups');
+      }
     });
 
     return () => unsubscribe();

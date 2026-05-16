@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, getDocs, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, deleteDoc, limit } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Send, Image as ImageIcon, UserPlus, UserCheck, X, Edit2, Check, Trash2, Sparkles, TrendingUp, Activity, Zap, Ghost, Star, Trophy, Flame, Users, MessageSquare, Search } from 'lucide-react';
@@ -133,6 +133,7 @@ export function Feed() {
   }, [hasMore, isLoadingMore]);
 
   useEffect(() => {
+    if (!user) return;
     const fetchStats = async () => {
       try {
         // Real-time listeners for stats would be better but let's do a one-time fetch or simplified logic
@@ -168,7 +169,9 @@ export function Feed() {
             velocity: `${Math.min(100, Math.floor((postsList.length / 50) * 100))}%`
           }));
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'posts_stats');
+          if (auth.currentUser) {
+            handleFirestoreError(error, OperationType.LIST, 'posts_stats');
+          }
         });
 
         const unsubUsers = onSnapshot(query(usersRef, where('uid', '>=', ''), limit(100)), (snapshot) => {
@@ -186,7 +189,9 @@ export function Feed() {
             } : prev.topFounder
           }));
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'users_stats');
+          if (auth.currentUser) {
+            handleFirestoreError(error, OperationType.LIST, 'users_stats');
+          }
         });
 
         return () => {
@@ -198,7 +203,7 @@ export function Feed() {
       }
     };
     fetchStats();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const fetchPulse = async () => {
@@ -211,6 +216,7 @@ export function Feed() {
   }, [stats.activeNodes]);
 
   useEffect(() => {
+    if (!user) return;
     // Satisfy Query Enforcer rule with authorId filter
     let q = query(collection(db, 'posts'), where('authorId', '>=', ''), orderBy('authorId'), orderBy('createdAt', 'desc'), limit(displayLimit));
     
@@ -228,7 +234,7 @@ export function Feed() {
     });
 
     return () => unsubscribe();
-  }, [displayLimit]);
+  }, [displayLimit, user]);
 
   useEffect(() => {
     // Reset limit when filters change significantly (optional, but good for UX)
@@ -236,6 +242,7 @@ export function Feed() {
   }, [filterTag, sortBy]);
 
   useEffect(() => {
+    if (!user) return;
     // Satisfy Query Enforcer rule with creatorId filter
     const q = query(collection(db, 'groups'), where('creatorId', '>=', ''));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -256,7 +263,7 @@ export function Feed() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {

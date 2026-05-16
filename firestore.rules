@@ -3,241 +3,175 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ===============================================================
-    // PILLAR 3: Global Safety Net
+    // HELPER FUNCTIONS
     // ===============================================================
-    match /{document=**} {
-      allow read, write: if false;
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // ===============================================================
-    // PILLAR 2: Hardened Global Helpers
-    // ===============================================================
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-    
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null; }
-    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
-    
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
+
     function isAdmin() {
-      return isVerified() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+      return isSignedIn() && (
         request.auth.token.email == "prettyinpurple2021@gmail.com"
       );
     }
 
-    // ===============================================================
-    // Validation Blueprints (Anti-Update-Gap)
-    // ===============================================================
-    
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'displayName', 'createdAt']) &&
-             data.uid == request.auth.uid &&
-             data.displayName is string && data.displayName.size() <= 100 &&
-             data.createdAt is timestamp &&
-             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
-             (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
-             (!('deleted' in data) || data.deleted is bool);
+      return data.displayName is string && data.displayName.size() <= 100 &&
+             data.bio is string && data.bio.size() <= 1000;
     }
 
     function isValidPost(data) {
-      return data.keys().hasAll(['authorId', 'authorName', 'content', 'createdAt']) &&
-             data.authorId == request.auth.uid &&
-             data.content is string && data.content.size() <= 5000 &&
-             data.createdAt is timestamp &&
-             (!('tags' in data) || (data.tags is list && data.tags.size() <= 10));
+      return data.content is string && data.content.size() <= 10000 &&
+             data.authorId is string;
     }
 
-    function isValidComment(data) {
-      return data.keys().hasAll(['postId', 'authorId', 'authorName', 'content', 'createdAt']) &&
-             data.authorId == request.auth.uid &&
-             data.content is string && data.content.size() <= 2000 &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidOpportunity(data) {
-      return data.keys().hasAll(['userId', 'userName', 'title', 'description', 'type', 'status', 'createdAt']) &&
-             data.userId == request.auth.uid &&
-             data.title is string && data.title.size() <= 200 &&
-             data.description is string && data.description.size() <= 5000 &&
-             data.type in ['hiring', 'selling', 'buying', 'collaboration'] &&
-             data.status in ['open', 'closed'] &&
-             data.createdAt is timestamp;
+    function isValidGroup(data) {
+      return data.name is string && data.name.size() <= 200 &&
+             data.creatorId is string;
     }
 
     function isValidEvent(data) {
-      return data.keys().hasAll(['groupId', 'title', 'date', 'location', 'attendees', 'createdAt']) &&
-             data.title is string && data.title.size() <= 200 &&
-             data.location is string && data.location.size() <= 500 &&
-             data.attendees is list &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidPersonalEvent(data) {
-      return data.keys().hasAll(['userId', 'title', 'description', 'date', 'type', 'completed', 'createdAt']) &&
-             data.userId == request.auth.uid &&
-             data.title is string && data.title.size() <= 200 &&
-             data.description is string && data.description.size() <= 2000 &&
-             data.type in ['event', 'reminder', 'task'] &&
-             data.completed is bool &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidVouch(data) {
-      return data.keys().hasAll(['toUserId', 'fromUserId', 'fromUserName', 'content', 'category', 'createdAt']) &&
-             data.fromUserId == request.auth.uid &&
-             data.toUserId != request.auth.uid && // No self-vouching
-             data.content is string && data.content.size() <= 1000 &&
-             data.category in ['technical', 'equity', 'vision', 'execution'] &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidMail(data) {
-      return data.keys().hasAll(['to', 'message']) &&
-             data.to == request.auth.token.email &&
-             data.message.keys().hasAll(['subject', 'html']) &&
-             data.message.subject is string && data.message.subject.size() <= 200 &&
-             data.message.html is string && data.message.html.size() <= 50000;
+      return data.title is string && data.title.size() <= 200 &&
+             data.creatorId is string;
     }
 
     // ===============================================================
-    // Collection Match Blocks
+    // COLLECTION MATCH BLOCKS
     // ===============================================================
+
+    // Root Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
     match /users/{userId} {
-      // Profiles are readable by anyone signed in (Directory access)
-      // PII (email) is isolated to a sub-collection
       allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.uid >= "";
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['connections', 'pendingConnections', 'sentRequests', 'endorsements', 'xp', 'level', 'momentum', 'blockedUsers', 'savedPosts']));
       
-      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
-      
-      allow update: if isOwner(userId) && (
-        (!('deleted' in existing()) || existing().deleted == false) &&
-        (
-          (incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'bio', 'location', 'photoURL', 'coverURL', 'skills', 'endorsements', 'links', 'portfolio', 'goals', 'updatedAt']) && incoming().updatedAt == request.time) ||
-          (incoming().diff(existing()).affectedKeys().hasOnly(['deleted', 'updatedAt']) && incoming().deleted == true && incoming().updatedAt == request.time) ||
-          (incoming().diff(existing()).affectedKeys().hasOnly(['connections', 'pendingConnections', 'sentRequests', 'blockedUsers']))
-        )
-      ) || (
-        isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['endorsements', 'connections', 'pendingConnections', 'sentRequests'])
-      );
-
-      // PII Isolation: email and other private info
       match /private/info {
         allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 
-    match /opportunities/{oppId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.userId >= "";
-      allow create: if isVerified() && isValidId(oppId) && isValidOpportunity(incoming()) && incoming().createdAt == request.time;
-      allow update: if isOwner(existing().userId) && (
-        (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().updatedAt == request.time) ||
-        (isValidOpportunity(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'type', 'tags', 'budget', 'updatedAt']) && incoming().updatedAt == request.time)
-      );
-      allow delete: if isOwner(existing().userId) || isAdmin();
-    }
-
     match /posts/{postId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.authorId >= "";
-      allow create: if isVerified() && isValidPost(incoming()) && incoming().createdAt == request.time;
-      allow update: if (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'images', 'tags', 'updatedAt']) && incoming().updatedAt == request.time) ||
-                    (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
-                    (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['commentCount']));
+      allow read: if isSignedIn();
+      allow create: if isVerified() && incoming().authorId == request.auth.uid && isValidPost(incoming());
+      allow update: if (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'images', 'tags', 'updatedAt'])) ||
+                    (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'commentCount']));
       allow delete: if isOwner(existing().authorId) || isAdmin();
     }
 
     match /comments/{commentId} {
       allow read: if isSignedIn();
-      allow create: if isVerified() && isValidComment(incoming()) && incoming().createdAt == request.time;
-      allow update: if (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt']) && incoming().updatedAt == request.time) ||
-                    (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['replyCount']));
-      allow delete: if isOwner(existing().authorId) || isAdmin();
-    }
-
-    match /vouches/{vouchId} {
-      allow read: if isSignedIn();
-      allow create: if isVerified() && isValidVouch(incoming()) && incoming().createdAt == request.time;
-      allow delete: if isOwner(existing().fromUserId) || isOwner(existing().toUserId) || isAdmin();
+      allow create: if isVerified() && incoming().userId == request.auth.uid;
+      allow update, delete: if isOwner(existing().userId) || isAdmin();
     }
 
     match /groups/{groupId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.creatorId >= "";
-      allow create: if isVerified() && request.auth.uid == incoming().creatorId && incoming().createdAt == request.time;
-      allow update: if (isOwner(existing().creatorId)) || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['members', 'moderators']));
+      allow read: if isSignedIn();
+      allow create: if isVerified() && incoming().creatorId == request.auth.uid && isValidGroup(incoming());
+      allow update: if isOwner(existing().creatorId) || (isSignedIn() && (incoming().diff(existing()).affectedKeys().hasOnly(['members', 'moderators']) || incoming().diff(existing()).affectedKeys().hasOnly(['goals', 'resources'])));
       allow delete: if isOwner(existing().creatorId) || isAdmin();
 
       match /goals/{goalId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn() && incoming().createdBy == request.auth.uid && incoming().createdAt == request.time;
-        allow update: if (isSignedIn() && (request.auth.uid == existing().createdBy || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId)) || (isAdmin());
-        allow delete: if (isSignedIn() && (request.auth.uid == existing().createdBy || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId)) || (isAdmin());
+        allow write: if isVerified();
       }
-
-      match /resources/{resourceId} {
+      match /resources/{resId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn() && incoming().createdBy == request.auth.uid && incoming().createdAt == request.time;
-        allow delete: if (isSignedIn() && (request.auth.uid == existing().createdBy || request.auth.uid == get(/databases/$(database)/documents/groups/$(groupId)).data.creatorId)) || (isAdmin());
+        allow write: if isVerified();
       }
     }
 
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && incoming().creatorId == request.auth.uid && isValidEvent(incoming());
+      allow update: if isOwner(existing().creatorId) || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['attendees', 'waitlist']));
+      allow delete: if isOwner(existing().creatorId) || isAdmin();
+
+      match /checkins/{checkinId} {
+        allow read: if isSignedIn();
+        allow create: if isVerified() && incoming().userId == request.auth.uid;
+      }
+    }
+
+    match /notifications/{notifId} {
+      allow get, list: if isOwner(resource.data.userId) || isAdmin();
+      allow update: if isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow create: if isSignedIn(); 
+    }
+
     match /chats/{chatId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
-      allow create: if isSignedIn() && incoming().participants.hasAll([request.auth.uid]) && incoming().createdAt == request.time;
-      allow update: if isSignedIn() && request.auth.uid in existing().participants && incoming().updatedAt == request.time;
-      
+      allow get, list: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid in incoming().participants;
+      allow update: if isSignedIn() && (request.auth.uid in existing().participants || isAdmin());
+
       match /messages/{messageId} {
-        allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && incoming().senderId == request.auth.uid && incoming().createdAt == request.time;
+        allow get, list, create: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants || isAdmin());
       }
     }
 
     match /activities/{activityId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.userId >= "";
-      allow create: if isSignedIn() && incoming().userId == request.auth.uid && incoming().createdAt == request.time;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
     }
 
-    match /events/{eventId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && resource.data.creatorId >= "";
-      allow create: if isVerified() && isValidEvent(incoming()) && incoming().createdAt == request.time;
-      allow update: if isSignedIn() && (
-        (incoming().diff(existing()).affectedKeys().hasOnly(['attendees'])) ||
-        (isAdmin())
-      );
-      allow delete: if isAdmin();
+    match /vouches/{vouchId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().sourceId == request.auth.uid;
+    }
+
+    match /marketplace_items/{itemId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().sellerId == request.auth.uid;
+      allow update, delete: if isOwner(existing().sellerId) || isAdmin();
+    }
+
+    match /opportunities/{oppId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if isOwner(existing().userId) || isAdmin();
     }
 
     match /personal_events/{eventId} {
-      allow read: if isOwner(resource.data.userId);
-      allow create: if isVerified() && isValidPersonalEvent(incoming()) && incoming().createdAt == request.time;
-      allow update: if isOwner(existing().userId) && (
-        (incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'completedDates', 'excludedDates', 'updatedAt']) && incoming().updatedAt == request.time) ||
-        (isValidPersonalEvent(incoming()) && incoming().updatedAt == request.time)
-      );
-      allow delete: if isOwner(existing().userId);
+      allow get, list: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isOwner(incoming().userId);
+      allow update, delete: if isOwner(existing().userId);
     }
 
-    match /notifications/{notificationId} {
-      allow read: if isOwner(resource.data.userId);
-      allow update: if isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
-      allow create: if isSignedIn() && incoming().sourceUserId == request.auth.uid && incoming().createdAt == request.time;
+    match /feedback/{feedbackId} {
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow read: if isAdmin();
     }
 
     match /mail/{mailId} {
-      allow create: if isVerified() && isValidMail(incoming());
-      allow read: if isVerified() && resource.data.to == request.auth.token.email;
+      allow create: if isSignedIn();
+      allow read: if isAdmin();
     }
   }
 }

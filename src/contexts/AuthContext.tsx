@@ -122,10 +122,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUserProfile(data);
             }
           }, (error) => {
-            handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+            // Only report error if we still think we are signed in
+            if (auth.currentUser) {
+              handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+            }
           });
         } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+          if (auth.currentUser) {
+            handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
+          }
         }
       }
       

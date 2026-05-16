@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
+import { auth, db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, arrayUnion, arrayRemove, where, getDocs, writeBatch } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Calendar as CalendarIcon, MapPin, Plus, Clock, Users, Share2, X, Edit2, Camera, UserCheck, Sparkles, LayoutGrid, List } from 'lucide-react';
@@ -63,7 +63,9 @@ export function Events() {
       
       setEvents(eventsData);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'events');
+      if (auth.currentUser) {
+        handleFirestoreError(error, OperationType.LIST, 'events');
+      }
     });
 
     return () => unsubscribe();
@@ -78,7 +80,9 @@ export function Events() {
       });
       setGroups(groupsMap);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'groups_for_events');
+      if (auth.currentUser) {
+        handleFirestoreError(error, OperationType.LIST, 'groups_for_events');
+      }
     });
     return () => unsubscribe();
   }, []);
