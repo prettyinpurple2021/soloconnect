@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { Search as SearchIcon, Users, FileText, User, Ghost, ArrowRight, Sparkles } from 'lucide-react';
+import { Search as SearchIcon, Users, FileText, User, Ghost, ArrowRight, Sparkles, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 
@@ -13,6 +13,7 @@ interface SearchResult {
   subtitle: string;
   image?: string;
   link: string;
+  isVerified?: boolean;
 }
 
 export function Search() {
@@ -34,18 +35,30 @@ export function Search() {
         const normalizedQuery = queryText.toLowerCase();
 
         // 1. Search Users
-        const usersQuery = query(collection(db, 'users'), where('uid', '>=', ''), limit(10));
+        const usersQuery = query(collection(db, 'users'), where('uid', '>=', ''), limit(20));
         const usersSnap = await getDocs(usersQuery);
         usersSnap.forEach(doc => {
           const data = doc.data();
-          if (data.displayName?.toLowerCase().includes(normalizedQuery) || data.bio?.toLowerCase().includes(normalizedQuery)) {
+          const hasMatchingSkill = data.skills?.some((s: string) => s.toLowerCase().includes(normalizedQuery));
+          const hasMatchingStack = data.portfolio?.some((p: any) => 
+            p.title?.toLowerCase().includes(normalizedQuery) || 
+            p.stack?.some((tech: string) => tech.toLowerCase().includes(normalizedQuery))
+          );
+
+          if (
+            data.displayName?.toLowerCase().includes(normalizedQuery) || 
+            data.bio?.toLowerCase().includes(normalizedQuery) ||
+            hasMatchingSkill ||
+            hasMatchingStack
+          ) {
             searchResults.push({
               id: doc.id,
               type: 'user',
               title: data.displayName || 'Anonymous Founder',
               subtitle: data.bio || 'Solo Founder',
               image: data.photoURL,
-              link: `/feed/profile/${doc.id}`
+              link: `/feed/profile/${doc.id}`,
+              isVerified: data.isVerified
             });
           }
         });
@@ -149,9 +162,16 @@ export function Search() {
                         {result.type}
                       </span>
                     </div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tight text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
-                      {result.title}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                       <h3 className="text-xl font-black uppercase italic tracking-tight text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
+                         {result.title}
+                       </h3>
+                       {result.isVerified && (
+                         <div className="bg-primary p-0.5 border-2 border-on-surface shadow-brutal-sm" title="Verified Founder">
+                           <Check className="w-3 h-3 stroke-[4px] text-on-surface" />
+                         </div>
+                       )}
+                    </div>
                     <p className="text-xs font-bold text-on-surface/60 line-clamp-2 italic leading-tight">
                       "{result.subtitle}"
                     </p>

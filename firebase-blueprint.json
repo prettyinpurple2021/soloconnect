@@ -270,6 +270,25 @@
       },
       "required": ["eventId", "userId", "userName", "status", "createdAt"]
     },
+    "RoadmapItem": {
+      "title": "RoadmapItem",
+      "description": "A feature proposal, roadmap suggestion, or bug tracking entry on SoloConnect",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["feature", "enhancement", "bug", "ux"] },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "completed", "issue"] },
+        "createdBy": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "creatorPhoto": { "type": "string" },
+        "upvotes": { "type": "array", "items": { "type": "string" } },
+        "commentsCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "category", "status", "createdBy", "creatorName", "createdAt", "updatedAt"]
+    },
     "Mail": {
       "title": "Mail",
       "description": "An email to be sent via the Trigger Email extension",
@@ -356,6 +375,10 @@
     "opportunities/{opportunityId}": {
       "schema": { "$ref": "#/entities/Opportunity" },
       "description": "Founder marketplace opportunities"
+    },
+    "roadmap_items/{itemId}": {
+      "schema": { "$ref": "#/entities/RoadmapItem" },
+      "description": "App features, user suggestions, and bug status tracking"
     },
     "mail/{mailId}": {
       "schema": { "$ref": "#/entities/Mail" },

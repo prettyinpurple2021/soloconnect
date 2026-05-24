@@ -136,7 +136,10 @@ export function ActivityFeed({ userId }: ActivityFeedProps) {
               <p className="text-xs font-black uppercase italic tracking-tight text-on-surface leading-tight">
                 {getActivityText(activity)}
               </p>
-              <p className="text-[10px] font-mono text-on-surface/40 uppercase tracking-widest mt-1">
+              <p 
+                className="text-[10px] font-mono text-on-surface/40 uppercase tracking-widest mt-1 cursor-help hover:text-on-surface/75 transition-colors duration-150"
+                title={activity.createdAt ? activity.createdAt.toDate().toLocaleString() : 'JUST_NOW'}
+              >
                 {activity.createdAt ? formatDistanceToNow(activity.createdAt.toDate(), { addSuffix: true }) : 'JUST_NOW'}
               </p>
             </div>

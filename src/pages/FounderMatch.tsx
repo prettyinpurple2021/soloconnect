@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, getDocs, limit, where } from 'firebase/firestore';
-import { Users, Sparkles, UserPlus, ArrowRight, Ghost, Zap, Star, ShieldCheck } from 'lucide-react';
+import { Users, Sparkles, UserPlus, ArrowRight, Ghost, Zap, Star, ShieldCheck, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { suggestMatches } from '../services/geminiService';
 import { Link } from 'react-router';
 import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
 import { toggleUserConnection } from '../lib/connections';
+
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface Match {
   uid: string;
@@ -22,6 +24,7 @@ export function FounderMatch() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [onlySeekers, setOnlySeekers] = useState(false);
 
   const fetchMatches = async () => {
     if (!user || !userProfile) return;
@@ -40,7 +43,9 @@ export function FounderMatch() {
         displayName: doc.data().displayName,
         skills: doc.data().skills,
         bio: doc.data().bio,
-        founderType: doc.data().founderType
+        founderType: doc.data().founderType,
+        isLookingForCoFounder: doc.data().isLookingForCoFounder || false,
+        coFounderRoleNeeded: doc.data().coFounderRoleNeeded || ''
       })).filter(u => u.uid !== user.uid); // Filter out self locally if needed, or by skipping in return if combined filters are complex
 
       const result = await suggestMatches(userProfile, otherUsers);
@@ -93,108 +98,184 @@ export function FounderMatch() {
         </div>
       </div>
 
-      {isGenerating ? (
-        <div className="text-center py-32 brutal-card bg-surface-container-low">
-          <div className="w-24 h-24 border-4 border-on-surface border-t-primary animate-spin shadow-brutal mx-auto mb-10"></div>
-          <h3 className="text-4xl font-headline font-black uppercase italic tracking-tighter animate-pulse text-on-surface">SCANNING_FOUNDER_DATABASE...</h3>
-          <p className="text-xl font-bold text-on-surface-variant uppercase italic mt-4 tracking-widest">ANALYZING_SYNERGIES_AND_SKILL_GAPS.</p>
+      {/* CO-FOUNDER LOCATOR CONTROLS */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 border-2 border-on-surface bg-on-surface/5">
+        <div className="text-left font-mono">
+          <p className="text-xs font-black uppercase italic text-on-surface">// SYNERGY_FILTER_REGULATOR</p>
+          <p className="text-[10px] text-on-surface-variant/75">LIMIT SEARCH MATRIX TO FOUNDERS ACTIVELY REQUISITIONING PARTNERS</p>
         </div>
-      ) : matches.length > 0 ? (
-        <div className="grid grid-cols-1 gap-12">
-          <AnimatePresence>
-            {matches.map((match, index) => (
-              <motion.div
-                key={match.uid}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={cn(
-                  "brutal-card flex flex-col lg:flex-row overflow-hidden group bg-surface-container-low",
-                  index % 2 === 0 ? "rotate-1" : "-rotate-1"
-                )}
-              >
-                <div className="lg:w-1/3 bg-on-surface p-10 flex flex-col items-center justify-center text-center relative">
-                  <div className="absolute top-4 left-4">
-                    <Star className="w-8 h-8 text-primary fill-primary" />
-                  </div>
-                  <div className="w-40 h-40 border-4 border-surface shadow-brutal overflow-hidden mb-6 group-hover:scale-110 transition-transform duration-500">
-                    <img 
-                      src={match.profile.photoURL || `https://ui-avatars.com/api/?name=${match.profile.displayName}`} 
-                      alt={match.profile.displayName} 
-                      className="w-full h-full object-cover grayscale"
-                    />
-                  </div>
-                  <h3 className="text-3xl font-headline font-black text-surface uppercase italic tracking-tighter mb-2">{match.profile.displayName}</h3>
-                  <span className="bg-primary text-on-surface px-4 py-1 font-black text-xs uppercase italic border-2 border-on-surface mb-6">{match.profile.founderType || 'SOLO_FOUNDER'}</span>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    {match.profile.skills?.slice(0, 3).map((skill: string) => (
-                      <span key={skill} className="chip-pill text-[8px] px-2 py-0.5 border-surface/20 text-surface/60">{skill}</span>
-                    ))}
-                  </div>
+        <button
+          onClick={() => setOnlySeekers(!onlySeekers)}
+          className={cn(
+            "px-6 py-3 border-2 border-on-surface text-xs font-black uppercase italic shadow-brutal transition-all cursor-pointer",
+            onlySeekers 
+              ? "bg-primary text-black" 
+              : "bg-surface text-on-surface hover:bg-on-surface/5"
+          )}
+        >
+          {onlySeekers ? "⚡ SHOWING ACTIVE CO-FOUNDER SEEKERS ONLY" : "SHOW ALL MATCHING FOUNDERS"}
+        </button>
+      </div>
+
+      {isGenerating ? (
+        <div className="space-y-12">
+          <div className="text-center py-20 brutal-card bg-surface-container-low border-dashed border-outline/30">
+            <div className="w-24 h-24 border-4 border-on-surface border-t-primary animate-spin shadow-brutal mx-auto mb-10"></div>
+            <h3 className="text-4xl font-headline font-black uppercase italic tracking-tighter animate-pulse text-on-surface">SCANNING_FOUNDER_DATABASE...</h3>
+            <p className="text-xl font-bold text-on-surface-variant uppercase italic mt-4 tracking-widest">ANALYZING_SYNERGIES_AND_SKILL_GAPS.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="brutal-card min-h-[400px] p-10 bg-on-surface/5 opacity-50">
+                <Skeleton className="h-40 w-40 mx-auto rounded-none mb-6" />
+                <Skeleton className="h-8 w-3/4 mx-auto mb-4" />
+                <Skeleton className="h-4 w-1/2 mx-auto mb-8" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
                 </div>
-                <div className="flex-1 p-10 flex flex-col justify-between bg-surface-container-lowest">
-                  <div className="space-y-8">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-secondary border-2 border-on-surface shadow-brutal">
-                          <ShieldCheck className="w-8 h-8 text-on-surface" />
-                        </div>
-                        <h4 className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">AI_MATCH_REASON</h4>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black uppercase italic text-on-surface-variant">SYNERGY_SCORE</span>
-                        <span className={cn(
-                          "text-3xl font-black italic tracking-tighter",
-                          match.synergyScore > 80 ? "text-primary" : match.synergyScore > 60 ? "text-secondary" : "text-tertiary"
-                        )}>
-                          {match.synergyScore}%
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-2xl font-black text-on-surface italic leading-tight tracking-tight">
-                      "{match.reason}"
-                    </p>
-                    <div className="bg-surface-container-low border-2 border-outline/15 border-dashed p-6">
-                      <p className="text-sm font-bold text-on-surface-variant italic">
-                        {match.profile.bio || "THIS_FOUNDER_HAS_NOT_YET_TRANSMITTED_A_BIO."}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-12 flex flex-col sm:flex-row gap-6">
-                    <Link 
-                      to={`/profile/${match.uid}`}
-                      className="flex-1 bg-surface border-2 border-on-surface px-8 py-4 font-black text-xl uppercase italic shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-4 text-on-surface"
-                    >
-                      VIEW_PROFILE <ArrowRight className="w-6 h-6" />
-                    </Link>
-                    <button 
-                      onClick={() => handleConnect(match.uid)}
-                      className="flex-1 liquid-btn px-8 py-4 font-black text-xl uppercase italic flex items-center justify-center gap-4"
-                    >
-                      <UserPlus className="w-6 h-6" /> CONNECT
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
-          
-          <div className="text-center pt-12">
-            <button 
-              onClick={fetchMatches}
-              className="bg-on-surface text-surface px-12 py-6 border-2 border-on-surface font-black uppercase italic text-2xl shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 transition-all"
-            >
-              REFRESH_MATCHES
-            </button>
           </div>
         </div>
-      ) : (
-        <div className="text-center py-32 brutal-card border-dashed bg-surface-container-low rotate-1">
-          <Ghost className="w-24 h-24 text-on-surface-variant/20 mx-auto mb-6 stroke-[3px]" />
-          <h3 className="text-4xl font-headline font-black text-on-surface mb-4 uppercase italic">NO_MATCHES_FOUND</h3>
-          <p className="text-xl font-bold text-on-surface-variant italic">"THE_VOID_IS_QUIET._TRY_UPDATING_YOUR_PROFILE_TO_ATTRACT_SYNERGIES."</p>
-        </div>
-      )}
+      ) : (() => {
+        const filteredMatches = onlySeekers
+          ? matches.filter(m => m.profile?.isLookingForCoFounder)
+          : matches;
+
+        if (filteredMatches.length === 0) {
+          return (
+            <div className="text-center py-32 brutal-card border-dashed bg-surface-container-low rotate-1">
+              <Ghost className="w-24 h-24 text-on-surface-variant/20 mx-auto mb-6 stroke-[3px]" />
+              <h3 className="text-4xl font-headline font-black text-on-surface mb-4 uppercase italic">NO_MATCHES_FOUND</h3>
+              <p className="text-xl font-bold text-on-surface-variant italic">
+                {onlySeekers 
+                  ? '"THE MATRIX HAS NO ACTIVE CO-FOUNDER SEEKERS COMPATIBLE WITH YOU YET. RESET FILTERS."' 
+                  : '"THE_VOID_IS_QUIET._TRY_UPDATING_YOUR_PROFILE_TO_ATTRACT_SYNERGIES."'}
+              </p>
+              {onlySeekers && (
+                <button
+                  onClick={() => setOnlySeekers(false)}
+                  className="mt-6 px-6 py-3 bg-on-surface text-surface text-xs font-black uppercase italic shadow-brutal hover:shadow-brutal-sm"
+                >
+                  RESET_FILTERS
+                </button>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <motion.div layout className="grid grid-cols-1 gap-12">
+            <AnimatePresence mode="popLayout">
+              {filteredMatches.map((match, index) => (
+                <motion.div
+                  layout
+                  key={match.uid}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  className={cn(
+                    "brutal-card flex flex-col lg:flex-row overflow-hidden group bg-surface-container-low",
+                    index % 2 === 0 ? "rotate-1" : "-rotate-1"
+                  )}
+                >
+                  <div className="lg:w-1/3 bg-on-surface p-10 flex flex-col items-center justify-center text-center relative">
+                    <div className="absolute top-4 left-4">
+                      <Star className="w-8 h-8 text-primary fill-primary" />
+                    </div>
+                    {match.profile?.isLookingForCoFounder && (
+                      <div className="absolute top-4 right-4 bg-primary text-on-surface text-[8px] font-black uppercase px-2 py-1 rotate-3 border-2 border-on-surface shadow-brutal animate-bounce">
+                        ⚡ SEEKING_CO
+                      </div>
+                    )}
+                    <div className="w-40 h-40 border-4 border-surface shadow-brutal overflow-hidden mb-6 group-hover:scale-110 transition-transform duration-500 relative">
+                      <img 
+                        src={match.profile?.photoURL || `https://ui-avatars.com/api/?name=${match.profile?.displayName}`} 
+                        alt={match.profile?.displayName} 
+                        className="w-full h-full object-cover grayscale"
+                      />
+                      {match.profile?.isVerified && (
+                        <div className="absolute bottom-2 right-2 bg-primary border-2 border-on-surface p-1 shadow-brutal" title="Verified Founder">
+                          <Check className="w-4 h-4 stroke-[4px]" />
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-3xl font-headline font-black text-surface uppercase italic tracking-tighter mb-2">{match.profile?.displayName}</h3>
+                    <span className="bg-primary text-on-surface px-4 py-1 font-black text-xs uppercase italic border-2 border-on-surface mb-4">{match.profile?.founderType || 'SOLO_FOUNDER'}</span>
+                    
+                    {match.profile?.isLookingForCoFounder && match.profile?.coFounderRoleNeeded && (
+                      <div className="text-[9px] text-primary italic font-black uppercase tracking-wider mb-4 border border-primary/20 bg-primary/5 px-2 py-1 max-w-full truncate">
+                        WANTS: {match.profile?.coFounderRoleNeeded}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {match.profile?.skills?.slice(0, 3).map((skill: string) => (
+                        <span key={skill} className="chip-pill text-[8px] px-2 py-0.5 border-surface/20 text-surface/60">{skill}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex-1 p-10 flex flex-col justify-between bg-surface-container-lowest">
+                    <div className="space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-secondary border-2 border-on-surface shadow-brutal">
+                            <ShieldCheck className="w-8 h-8 text-on-surface" />
+                          </div>
+                          <h4 className="text-2xl font-headline font-black uppercase italic tracking-tighter text-on-surface">AI_MATCH_REASON</h4>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] font-black uppercase italic text-on-surface-variant">SYNERGY_SCORE</span>
+                          <span className={cn(
+                            "text-3xl font-black italic tracking-tighter",
+                            match.synergyScore > 80 ? "text-primary" : match.synergyScore > 60 ? "text-secondary" : "text-tertiary"
+                          )}>
+                            {match.synergyScore}%
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-2xl font-black text-on-surface italic leading-tight tracking-tight">
+                        "{match.reason}"
+                      </p>
+                      <div className="bg-surface-container-low border-2 border-outline/15 border-dashed p-6">
+                        <p className="text-sm font-bold text-on-surface-variant italic">
+                          {match.profile?.bio || "THIS_FOUNDER_HAS_NOT_YET_TRANSMITTED_A_BIO."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-12 flex flex-col sm:flex-row gap-6">
+                      <Link 
+                        to={`/profile/${match.uid}`}
+                        className="flex-1 bg-surface border-2 border-on-surface px-8 py-4 font-black text-xl uppercase italic shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all flex items-center justify-center gap-4 text-on-surface"
+                      >
+                        VIEW_PROFILE <ArrowRight className="w-6 h-6" />
+                      </Link>
+                      <button 
+                        onClick={() => handleConnect(match.uid)}
+                        className="flex-1 liquid-btn px-8 py-4 font-black text-xl uppercase italic flex items-center justify-center gap-4 cursor-pointer"
+                      >
+                        <UserPlus className="w-6 h-6" /> CONNECT
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            
+            <div className="text-center pt-12">
+              <button 
+                onClick={fetchMatches}
+                className="bg-on-surface text-surface px-12 py-6 border-2 border-on-surface font-black uppercase italic text-2xl shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 transition-all cursor-pointer"
+              >
+                REFRESH_MATCHES
+              </button>
+            </div>
+          </motion.div>
+        );
+      })()}
 
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

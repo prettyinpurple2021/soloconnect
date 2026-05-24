@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { generateEventDescription } from '../services/geminiService';
 import { cn } from '../lib/utils';
 import { CalendarView } from '../components/CalendarView';
+import { EventSkeleton } from '../components/ui/Skeleton';
 
 interface Event {
   id: string;
@@ -32,6 +33,7 @@ interface Connection {
 
 export function Events() {
   const { user, userProfile } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState<Event[]>([]);
   const [groups, setGroups] = useState<Record<string, string>>({});
   const [isCreating, setIsCreating] = useState(false);
@@ -62,10 +64,12 @@ export function Events() {
       })) as Event[];
       
       setEvents(eventsData);
+      setIsLoading(false);
     }, (error) => {
       if (auth.currentUser) {
         handleFirestoreError(error, OperationType.LIST, 'events');
       }
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -493,7 +497,14 @@ export function Events() {
         </motion.div>
       )}
 
-      {viewMode === 'calendar' ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <EventSkeleton />
+          <EventSkeleton />
+          <EventSkeleton />
+          <EventSkeleton />
+        </div>
+      ) : viewMode === 'calendar' ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

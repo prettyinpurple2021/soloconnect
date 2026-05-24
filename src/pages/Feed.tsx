@@ -13,6 +13,7 @@ import { Link, useNavigate } from 'react-router';
 import { toast } from 'react-hot-toast';
 import { logActivity } from '../lib/activities';
 import { PostComments } from '../components/PostComments';
+import { PostSkeleton } from '../components/ui/Skeleton';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { OnboardingChecklist } from '../components/OnboardingChecklist';
@@ -25,6 +26,7 @@ interface Post {
   authorId: string;
   authorName: string;
   authorPhoto?: string;
+  authorVerified?: boolean;
   content: string;
   images?: string[];
   tags?: string[];
@@ -48,6 +50,7 @@ const COMMON_TAGS = ['Showcase', 'Question', 'Milestone', 'Resource', 'Collabora
 export function Feed() {
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
   const [posts, setPosts] = useState<Post[]>([]);
   const [groups, setGroups] = useState<Record<string, Group>>({});
   const [newPost, setNewPost] = useState('');
@@ -78,7 +81,8 @@ export function Feed() {
       name: 'NEON_GLOW',
       photo: 'https://picsum.photos/seed/founder/100/100',
       level: 42,
-      label: 'COMMUNITY_PIONEER'
+      label: 'COMMUNITY_PIONEER',
+      isVerified: false
     }
   });
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -185,7 +189,8 @@ export function Feed() {
               name: topUser.displayName?.toUpperCase().replace(/\s+/g, '_') || 'ANON_NODE',
               photo: topUser.photoURL || 'https://picsum.photos/seed/founder/100/100',
               level: topUser.level || 1,
-              label: topUser.xp && topUser.xp > 5000 ? 'LEGENDARY_BUILDER' : 'ACTIVE_NODE'
+              label: topUser.xp && topUser.xp > 5000 ? 'LEGENDARY_BUILDER' : 'ACTIVE_NODE',
+              isVerified: topUser.isVerified || false
             } : prev.topFounder
           }));
         }, (error) => {
@@ -228,9 +233,11 @@ export function Feed() {
       setPosts(postsData);
       setHasMore(snapshot.docs.length === displayLimit);
       setIsLoadingMore(false);
+      setIsLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'posts');
       setIsLoadingMore(false);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -305,6 +312,7 @@ export function Feed() {
           authorId: user.uid,
           authorName: user.displayName || 'Anonymous',
           authorPhoto: user.photoURL || '',
+          authorVerified: userProfile?.isVerified || false,
           content: newPost.trim(),
           images: imageUrls,
           tags: postTags,
@@ -805,8 +813,15 @@ export function Feed() {
 
       {/* Feed */}
       <div className="space-y-12">
-        <AnimatePresence>
-          {filteredPosts.map((post, index) => (
+        {isLoading ? (
+          <div className="space-y-12">
+            <PostSkeleton />
+            <PostSkeleton />
+            <PostSkeleton />
+          </div>
+        ) : (
+          <AnimatePresence>
+            {filteredPosts.map((post, index) => (
             <motion.div
               key={post.id}
               ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
@@ -830,6 +845,11 @@ export function Feed() {
                       <Link to={`/feed/profile/${post.authorId}`} className="text-xl font-headline font-black text-on-surface uppercase italic tracking-tight hover:text-primary transition-colors leading-tight">
                         {post.authorName}
                       </Link>
+                      {post.authorVerified && (
+                        <div className="bg-primary p-0.5 border border-on-surface shadow-brutal-sm" title="Verified Founder">
+                          <Check className="w-3 h-3 stroke-[4px]" />
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <span className="bg-secondary border-2 border-on-surface px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-brutal">LVL {Math.floor(Math.random() * 50) + 1}</span>
                         {user && user.uid !== post.authorId && (() => {
@@ -1068,6 +1088,7 @@ export function Feed() {
             </motion.div>
           ))}
         </AnimatePresence>
+        )}
 
         {/* Loading State / End of Feed */}
         <div className="py-10 text-center">
@@ -1145,9 +1166,16 @@ export function Feed() {
                       />
                     </Link>
                     <div className="flex-1 min-w-0">
-                      <Link to={`/feed/profile/${result.id}`} className="text-xs font-black uppercase italic truncate block hover:text-primary transition-colors">
-                        {result.displayName}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link to={`/feed/profile/${result.id}`} className="text-xs font-black uppercase italic truncate block hover:text-primary transition-colors">
+                          {result.displayName}
+                        </Link>
+                        {result.isVerified && (
+                          <div className="bg-primary p-0.5 border border-on-surface shadow-brutal-sm" title="Verified Founder">
+                            <Check className="w-2 h-2 stroke-[4px]" />
+                          </div>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {result.skills?.slice(0, 2).map((skill: string) => (
                           <span key={skill} className="text-[7px] font-bold uppercase italic bg-on-surface/5 px-1 py-0.5 border border-on-surface/10">

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, collection, addDoc } from 'firebase/firestore';
 
 export interface UserProfileData {
   uid: string;
@@ -18,7 +18,10 @@ export interface UserProfileData {
   sentRequests?: string[];
   savedPosts?: string[];
   blockedUsers?: string[];
+  followedProjects?: string[];
+  endorsements?: { [skill: string]: string[] };
   onboardingDismissed?: boolean;
+  isVerified?: boolean;
   createdAt: any;
   updatedAt: any;
 }
@@ -72,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               pendingConnections: [],
               sentRequests: [],
               savedPosts: [],
+              isVerified: currentUser.emailVerified || false,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             };
@@ -119,6 +123,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               if (!data.email && currentUser.email) {
                 data.email = currentUser.email;
               }
+              
+              // Auto-verify if email is verified but database says no
+              if (currentUser.emailVerified && !data.isVerified) {
+                const userRef = doc(db, 'users', currentUser.uid);
+                updateDoc(userRef, { isVerified: true, updatedAt: serverTimestamp() }).catch(console.error);
+                data.isVerified = true;
+              }
+
               setUserProfile(data);
             }
           }, (error) => {

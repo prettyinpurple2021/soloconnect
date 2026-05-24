@@ -18,6 +18,7 @@ interface BentoDashboardProps {
       photo: string;
       level: number;
       label: string;
+      isVerified?: boolean;
     }
   };
 }
@@ -123,8 +124,13 @@ export function BentoDashboard({ pulseInsight, stats }: BentoDashboardProps) {
             <Star className="w-24 h-24 text-on-surface" />
          </div>
          <div className="flex items-center gap-6 relative z-10">
-            <div className="w-20 h-20 border-2 border-on-surface shadow-brutal overflow-hidden bg-surface-container-low shrink-0 group-hover:rotate-6 transition-transform">
+            <div className="w-20 h-20 border-2 border-on-surface shadow-brutal overflow-hidden bg-surface-container-low shrink-0 group-hover:rotate-6 transition-transform relative">
               <img src={stats.topFounder?.photo || "https://picsum.photos/seed/neo/200/200"} alt="Top Founder" className="w-full h-full object-cover grayscale" />
+              {stats.topFounder?.isVerified && (
+                <div className="absolute bottom-1 right-1 bg-primary border border-on-surface p-0.5 shadow-brutal-sm" title="Verified Founder">
+                  <Star className="w-2 h-2 text-on-surface fill-on-surface" />
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
                <span className="text-[8px] font-black text-primary uppercase tracking-widest italic mb-1 block">NODE_ALPHA_DETECTED</span>
