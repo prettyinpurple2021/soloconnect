@@ -20,6 +20,9 @@ import { OnboardingChecklist } from '../components/OnboardingChecklist';
 import { BentoDashboard } from '../components/BentoDashboard';
 import { generatePostContent, generateImage, analyzePulse } from '../services/geminiService';
 import { addXP } from '../lib/reputation';
+import { PersonaBadge, PersonaIcon } from '../components/PersonaBadge';
+import { PERSONAS_LIST } from '../types';
+import { playSound } from '../lib/sounds';
 
 interface Post {
   id: string;
@@ -27,6 +30,7 @@ interface Post {
   authorName: string;
   authorPhoto?: string;
   authorVerified?: boolean;
+  authorFounderType?: string;
   content: string;
   images?: string[];
   tags?: string[];
@@ -66,6 +70,7 @@ export function Feed() {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [filterTag, setFilterTag] = useState<string>('All');
+  const [filterPersona, setFilterPersona] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'recent' | 'liked' | 'commented'>('recent');
   const [pulseInsight, setPulseInsight] = useState<string>('Analyzing community momentum...');
   const [displayLimit, setDisplayLimit] = useState(10);
@@ -313,6 +318,7 @@ export function Feed() {
           authorName: user.displayName || 'Anonymous',
           authorPhoto: user.photoURL || '',
           authorVerified: userProfile?.isVerified || false,
+          authorFounderType: userProfile?.founderType || 'Solo Founder',
           content: newPost.trim(),
           images: imageUrls,
           tags: postTags,
@@ -363,6 +369,12 @@ export function Feed() {
     const isLiked = currentLikes.includes(user.uid);
 
     try {
+      if (!isLiked) {
+        playSound('success');
+      } else {
+        playSound('click');
+      }
+
       await updateDoc(postRef, {
         likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
       });
@@ -388,6 +400,12 @@ export function Feed() {
     const isSaved = userProfile.savedPosts?.includes(postId);
 
     try {
+      if (!isSaved) {
+        playSound('success');
+      } else {
+        playSound('click');
+      }
+
       await updateDoc(userRef, {
         savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
       });
@@ -570,6 +588,10 @@ export function Feed() {
       if (filterTag === 'Saved') return userProfile?.savedPosts?.includes(post.id);
       return post.tags?.includes(filterTag);
     })
+    .filter(post => {
+      if (filterPersona === 'All') return true;
+      return (post.authorFounderType || 'Solo Founder').toLowerCase() === filterPersona.toLowerCase();
+    })
     .sort((a, b) => {
       if (sortBy === 'recent') {
         const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
@@ -592,6 +614,62 @@ export function Feed() {
 
       {/* Bento Kinetic Dashboard */}
       <BentoDashboard pulseInsight={pulseInsight} stats={stats} />
+
+      {/* Identity Activation Terminal */}
+      {(!userProfile?.founderType || ['Bootstrapper', 'Visionary', 'Builder', 'Specialist', ''].includes(userProfile.founderType)) && (
+        <div className="bg-[#facc15] text-black border-[8px] border-on-surface p-8 shadow-kinetic relative overflow-hidden">
+          <div className="absolute -right-12 -top-12 opacity-10 rotate-12 pointer-events-none">
+            <Zap className="w-48 h-48 text-black animate-pulse" />
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 relative z-10">
+            <div>
+              <div className="flex items-center gap-3 text-black mb-3">
+                <Sparkles className="w-6 h-6 animate-spin" style={{ animationDuration: '6s' }} />
+                <span className="text-xs font-black uppercase tracking-[0.3em] font-mono">PROTOCOL_IDENTITY_LOCK_REQUIRED</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-headline font-black uppercase italic tracking-tighter leading-none mb-3">CLAIM YOUR CREATOR COHORT</h3>
+              <p className="text-xs md:text-sm font-bold uppercase italic tracking-tight opacity-95 max-w-3xl leading-snug">
+                Establish your presence. Select one of our 7 specialized creator/founder cohorts to secure target AI matchmaking, network indexing, and rich identity tags within SoloConnect.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+            {PERSONAS_LIST.map((p) => (
+              <button
+                key={p.id}
+                onClick={async () => {
+                  try {
+                    if (user) {
+                      await updateDoc(doc(db, 'users', user.uid), {
+                        founderType: p.id,
+                        updatedAt: serverTimestamp()
+                      });
+                      confetti();
+                      toast.success(`COHORT LOCKED: ${p.id.toUpperCase()}`);
+                    }
+                  } catch (err) {
+                    toast.error('FAILED TO LOCK IDENTITY.');
+                  }
+                }}
+                className="bg-surface text-on-surface border-4 border-on-surface p-5 text-left shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 hover:bg-neutral-50 transition-all group flex flex-col justify-between"
+              >
+                <div className="flex items-start justify-between w-full mb-4">
+                  <div className={cn("p-2.5 border-2 border-on-surface shadow-brutal", p.bgClass, p.textClass)}>
+                    <PersonaIcon iconName={p.iconName} className="w-5 h-5" />
+                  </div>
+                  <span className="text-[8px] font-mono font-black border border-on-surface px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant uppercase tracking-widest">{p.systemCode}</span>
+                </div>
+                <div>
+                  <h4 className="text-lg font-headline font-black uppercase italic tracking-tight mb-1 group-hover:text-primary transition-colors leading-tight">{p.id}</h4>
+                  <p className="text-[9px] font-bold text-on-surface-variant font-mono uppercase tracking-wider mb-3 leading-none">{p.tagline}</p>
+                  <p className="text-[10px] font-medium leading-snug text-on-surface-variant/75">{p.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
         <div>
@@ -809,6 +887,42 @@ export function Feed() {
             </button>
           ))}
         </div>
+
+        {/* Dynamic Persona Filter Bar */}
+        <div className="pt-4 border-t-2 border-outline/10 space-y-4">
+          <p className="text-[10px] font-bold uppercase italic tracking-widest text-on-surface-variant">// DISCOVER_BY_PERSONA</p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setFilterPersona('All')}
+              className={cn(
+                "chip-pill border-2 px-3 py-1.5 text-[10px] font-black uppercase italic tracking-wider flex items-center gap-2 transition-transform hover:scale-[1.03]",
+                filterPersona === 'All' 
+                  ? "bg-on-surface text-surface border-on-surface shadow-brutal" 
+                  : "bg-surface border-on-surface/20 text-on-surface-variant hover:border-on-surface"
+              )}
+            >
+              <span>ALL_PERSONAS</span>
+            </button>
+            {PERSONAS_LIST.map((p) => {
+              const isSelected = filterPersona === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setFilterPersona(p.id)}
+                  className={cn(
+                    "chip-pill border-2 px-3 py-1.5 text-[10px] font-black uppercase italic tracking-wider flex items-center gap-2 transition-transform hover:scale-[1.03]",
+                    isSelected 
+                      ? `${p.bgClass} ${p.textClass} border-on-surface shadow-brutal` 
+                      : "bg-surface border-on-surface/20 text-on-surface-variant hover:border-on-surface"
+                  )}
+                >
+                  <PersonaIcon iconName={p.iconName} className="w-3.5 h-3.5" />
+                  <span>{p.name.replace(/_/g, ' ')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Feed */}
@@ -850,8 +964,9 @@ export function Feed() {
                           <Check className="w-3 h-3 stroke-[4px]" />
                         </div>
                       )}
-                      <div className="flex items-center gap-2">
-                        <span className="bg-secondary border-2 border-on-surface px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-brutal">LVL {Math.floor(Math.random() * 50) + 1}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="bg-secondary border-2 border-on-surface px-2 py-0.5 text-[8px] font-bold uppercase italic shadow-brutal shrink-0">LVL {Math.floor(Math.random() * 50) + 1}</span>
+                        <PersonaBadge personaString={post.authorFounderType} size="sm" />
                         {user && user.uid !== post.authorId && (() => {
                           const cState = getConnState(post.authorId);
                           return (

@@ -94,7 +94,7 @@ export const analyzePulse = async (stats: any): Promise<string> => {
   try {
     const response = await callAI('generate', {
       model: "gemini-3-flash-preview",
-      contents: `As a SoloScribe AI Analyst, analyze these community stats and provide a one-sentence punchy insight for the "Founder Pulse" dashboard. 
+      contents: `As a SoloConnect AI Analyst, analyze these community stats and provide a one-sentence punchy insight for the "Founder Pulse" dashboard. 
       Stats: ${JSON.stringify(stats)}
       Focus on momentum, engagement, or growth. Keep it under 15 words.`,
     });

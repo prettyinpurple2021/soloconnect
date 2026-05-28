@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import { toggleUserConnection } from '../lib/connections';
 
 import { Skeleton } from '../components/ui/Skeleton';
+import { PersonaBadge } from '../components/PersonaBadge';
 
 interface Match {
   uid: string;
@@ -20,12 +21,23 @@ interface Match {
 }
 
 export function FounderMatch() {
+  // ==========================================
+  // STATE MANAGEMENT & FILTER REGULATORS
+  // ==========================================
+  // user / userProfile: Primary active authentication contexts.
+  // matches: holds compiled list of matchmaking recommendations returned from Gemini.
+  // onlySeekers: local filter toggle to isolate founders with active co-founder requisition flags.
   const { user, userProfile } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [onlySeekers, setOnlySeekers] = useState(false);
 
+  /**
+   * @function fetchMatches
+   * @description Pulls top recommended users from firestore, sanitizes payload and sends matching candidates
+   * directly to Gemini AI to generate customized Synergy Scores & bespoke Match Reasons.
+   */
   const fetchMatches = async () => {
     if (!user || !userProfile) return;
     
@@ -166,6 +178,12 @@ export function FounderMatch() {
           );
         }
 
+        // ==========================================
+        // DYNAMIC LAYOUT ANNIHILATION AND spring TRANSITIONS
+        // ==========================================
+        // Using 'layout' prop on parent & children guarantees super smooth re-positioning.
+        // mode="popLayout" is critical here: it takes exiting cards out of document stream immediately,
+        // allowing adjacent cards to slide beautifully into their matching coordinates instead of jumping.
         return (
           <motion.div layout className="grid grid-cols-1 gap-12">
             <AnimatePresence mode="popLayout">
@@ -204,7 +222,7 @@ export function FounderMatch() {
                       )}
                     </div>
                     <h3 className="text-3xl font-headline font-black text-surface uppercase italic tracking-tighter mb-2">{match.profile?.displayName}</h3>
-                    <span className="bg-primary text-on-surface px-4 py-1 font-black text-xs uppercase italic border-2 border-on-surface mb-4">{match.profile?.founderType || 'SOLO_FOUNDER'}</span>
+                    <PersonaBadge personaString={match.profile?.founderType} size="sm" showTagline={false} className="mb-4" />
                     
                     {match.profile?.isLookingForCoFounder && match.profile?.coFounderRoleNeeded && (
                       <div className="text-[9px] text-primary italic font-black uppercase tracking-wider mb-4 border border-primary/20 bg-primary/5 px-2 py-1 max-w-full truncate">

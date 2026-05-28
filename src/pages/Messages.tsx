@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, limit, increment } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, getDoc, setDoc, limit, increment, deleteField } from 'firebase/firestore';
 import { Send, Search, User, MoreVertical, Phone, Video, Smile, Paperclip } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
@@ -25,6 +25,7 @@ interface Message {
   content: string;
   createdAt: any;
   read: boolean;
+  reactions?: Record<string, string>;
 }
 
 interface UserProfile {
@@ -46,6 +47,47 @@ export function Messages() {
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // React Quick Reactions State
+  const [activeReactionPickerMessageId, setActiveReactionPickerMessageId] = useState<string | null>(null);
+
+  const handleToggleReaction = async (messageId: string, emoji: string) => {
+    if (!user || !selectedChat) return;
+
+    const messageRef = doc(db, 'chats', selectedChat.id, 'messages', messageId);
+    const msg = messages.find(m => m.id === messageId);
+    const existingReaction = msg?.reactions?.[user.uid];
+
+    try {
+      if (existingReaction === emoji) {
+        await updateDoc(messageRef, {
+          [`reactions.${user.uid}`]: deleteField()
+        });
+      } else {
+        await updateDoc(messageRef, {
+          [`reactions.${user.uid}`]: emoji
+        });
+      }
+    } catch (error) {
+      console.warn("Reaction update error:", error);
+      toast.error('TRANSMISSION_INTERRUPTED_PROTOCOL_FAIL');
+    } finally {
+      setActiveReactionPickerMessageId(null);
+    }
+  };
+
+  const handleMessageDoubleClick = (msg: Message) => {
+    if (!user) return;
+    // Set default reaction '❤️' on double-click if none exists, or clear it if they already reacted with '❤️'
+    const userReactedWith = msg.reactions?.[user.uid];
+    if (userReactedWith === '❤️') {
+      handleToggleReaction(msg.id, '❤️');
+    } else if (!userReactedWith) {
+      handleToggleReaction(msg.id, '❤️');
+    }
+    // Toggle selector menu as well so users can pick alternative options or remove
+    setActiveReactionPickerMessageId(msg.id);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -401,6 +443,13 @@ export function Messages() {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-10 space-y-10 bg-surface-container-lowest relative">
               <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+              {activeReactionPickerMessageId && (
+                <div 
+                  className="fixed inset-0 z-20 cursor-default" 
+                  onClick={() => setActiveReactionPickerMessageId(null)} 
+                  onContextMenu={(e) => { e.preventDefault(); setActiveReactionPickerMessageId(null); }}
+                />
+              )}
               {messages.map((msg, idx) => {
                 const isMe = msg.senderId === user?.uid;
                 const showAvatar = idx === 0 || messages[idx - 1].senderId !== msg.senderId;
@@ -427,13 +476,81 @@ export function Messages() {
                         )}
                       </div>
                     )}
-                    <div className={cn(
-                      "max-w-[70%] p-6 border-2 border-on-surface shadow-brutal text-base font-black italic tracking-tight relative",
-                      isMe 
-                        ? "bg-primary text-black" 
-                        : "bg-surface-container-low text-on-surface"
-                    )}>
+                    <div 
+                      onDoubleClick={() => handleMessageDoubleClick(msg)}
+                      className={cn(
+                        "max-w-[70%] p-6 border-2 border-on-surface shadow-brutal text-base font-black italic tracking-tight relative cursor-pointer select-none transition-all duration-150 active:scale-98",
+                        isMe 
+                          ? "bg-primary text-black" 
+                          : "bg-surface-container-low text-on-surface"
+                      )}
+                    >
+                      {activeReactionPickerMessageId === msg.id && (
+                        <div className={cn(
+                          "absolute -top-14 z-30 flex items-center gap-1 bg-surface border-4 border-on-surface p-1.5 shadow-brutal animate-fade-in",
+                          isMe ? "right-0" : "left-0"
+                        )}>
+                          {['❤️', '👍', '🔥', '⚡', '💀', '👽', '🚀'].map((emoji) => {
+                            const hasThisReaction = msg.reactions?.[user?.uid || ''] === emoji;
+                            return (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleReaction(msg.id, emoji);
+                                }}
+                                className={cn(
+                                  "w-8 h-8 flex items-center justify-center text-lg hover:scale-125 hover:bg-secondary/15 transition-all rounded-none cursor-pointer",
+                                  hasThisReaction ? "bg-primary border border-on-surface shadow-brutal-sm scale-110" : ""
+                                )}
+                              >
+                                {emoji}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
                       <p className="leading-tight uppercase">"{msg.content}"</p>
+                      
+                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        <div className={cn(
+                          "flex flex-wrap gap-1.5 mt-3",
+                          isMe ? "justify-end" : "justify-start"
+                        )}>
+                          {Object.entries(
+                            Object.entries(msg.reactions).reduce((acc, [userId, emoji]) => {
+                              if (emoji) {
+                                if (!acc[emoji]) acc[emoji] = [];
+                                acc[emoji].push(userId);
+                              }
+                              return acc;
+                            }, {} as Record<string, string[]>)
+                          ).map(([emoji, userIds]) => {
+                            const hasReacted = user && userIds.includes(user.uid);
+                            return (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleReaction(msg.id, emoji);
+                                }}
+                                className={cn(
+                                  "flex items-center gap-1.5 px-2 py-0.5 text-xs font-black rounded-none border border-on-surface transition-all shadow-brutal-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none cursor-pointer",
+                                  hasReacted 
+                                    ? "bg-[#22c55e] text-black" 
+                                    : "bg-surface text-on-surface hover:bg-surface-container-high"
+                                )}
+                              >
+                                <span>{emoji} {userIds.length}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       <p className={cn(
                         "text-[8px] mt-3 font-black uppercase tracking-widest text-on-surface-variant italic",
                         isMe ? "text-right" : "text-left"

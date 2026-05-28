@@ -234,3 +234,65 @@
     @apply liquid-gradient text-on-surface shadow-brutal;
   }
 }
+
+/* --- VINTAGE Y2K CRT & NEON HARDWARE OVERLAYS --- */
+.crt-active {
+  animation: crt-flicker 0.15s infinite;
+  text-shadow: 0 0 2px rgba(255,172,228,0.4), 0 0 5px rgba(165,243,252,0.3);
+}
+
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 4px, 6px 100%;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.dark .crt-overlay {
+  opacity: 0.22;
+}
+
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle, transparent 65%, rgba(0,0,0,0.4) 100%);
+  z-index: 99998;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+@keyframes crt-flicker {
+  0% { opacity: 0.992; }
+  50% { opacity: 1; }
+  100% { opacity: 0.995; }
+}
+
+/* Y2K Blast Particle Drift */
+@keyframes particle-drift {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(1.4) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+.cyber-particle {
+  pointer-events: none;
+  position: fixed;
+  animation: particle-drift 0.7s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+  z-index: 10000;
+  font-family: var(--font-mono);
+  font-weight: 900;
+  text-shadow: 2px 2px 0px #000;
+  will-change: transform, opacity;
+}
+

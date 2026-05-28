@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { playSound } from '../lib/sounds';
 import { 
   collection, 
   query, 
@@ -62,6 +63,57 @@ interface PersonalEvent {
 export function PersonalCalendar() {
   const { user } = useAuth();
   const [events, setEvents] = useState<PersonalEvent[]>([]);
+  
+  const calculateStreak = (eventsList: PersonalEvent[]) => {
+    const completedDates = new Set<string>();
+
+    eventsList.forEach(event => {
+      if (!event.recurrence || event.recurrence === 'none') {
+        if (event.completed && event.date) {
+          const d = event.date.toDate ? event.date.toDate() : new Date(event.date);
+          completedDates.add(format(d, 'yyyy-MM-dd'));
+        }
+      } else if (event.completedDates) {
+        event.completedDates.forEach(dateStr => {
+          completedDates.add(dateStr);
+        });
+      }
+    });
+
+    if (completedDates.size === 0) return 0;
+
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+
+    let currentStreak = 0;
+    let checkDate = new Date();
+
+    if (!completedDates.has(todayStr)) {
+      if (completedDates.has(yesterdayStr)) {
+        checkDate = yesterday;
+      } else {
+        return 0;
+      }
+    }
+
+    // Protection to avoid infinite loop (max check of 365 days)
+    for (let i = 0; i < 365; i++) {
+      const checkDateStr = format(checkDate, 'yyyy-MM-dd');
+      if (completedDates.has(checkDateStr)) {
+        currentStreak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return currentStreak;
+  };
+
+  const streak = calculateStreak(events);
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAdding, setIsAdding] = useState(false);
@@ -191,20 +243,30 @@ export function PersonalCalendar() {
 
   const toggleComplete = async (event: PersonalEvent, day: Date) => {
     try {
+      let isCompleting = false;
       if (!event.recurrence || event.recurrence === 'none') {
+        isCompleting = !event.completed;
         await updateDoc(doc(db, 'personal_events', event.id), {
-          completed: !event.completed
+          completed: isCompleting
         });
       } else {
         const dateStr = format(day, 'yyyy-MM-dd');
         const currentCompletedDates = event.completedDates || [];
-        const newCompletedDates = currentCompletedDates.includes(dateStr)
-          ? currentCompletedDates.filter(d => d !== dateStr)
-          : [...currentCompletedDates, dateStr];
+        isCompleting = !currentCompletedDates.includes(dateStr);
+        const newCompletedDates = isCompleting
+          ? [...currentCompletedDates, dateStr]
+          : currentCompletedDates.filter(d => d !== dateStr);
         
         await updateDoc(doc(db, 'personal_events', event.id), {
           completedDates: newCompletedDates
         });
+      }
+
+      if (isCompleting) {
+        playSound('success');
+        toast.success('MISSION_ACCOMPLISHED!');
+      } else {
+        playSound('click');
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `personal_events/${event.id}`);
@@ -361,6 +423,31 @@ export function PersonalCalendar() {
 
         {/* Day Details Sidebar */}
         <div className="w-full lg:w-96 bg-surface-bg p-8 flex flex-col border-l-0 lg:border-l-[8px] border-on-surface">
+          {/* Consistency Streak Widget */}
+          <div className={cn(
+            "mb-8 p-5 border-[4px] border-on-surface shadow-kinetic-sm relative overflow-hidden transition-all duration-300",
+            streak > 0 ? "bg-[#facc15] text-black" : "bg-surface-container-low text-on-surface-variant/70 border-on-surface/40"
+          )}>
+            <div className="absolute -top-6 -right-6 w-20 h-20 opacity-10 bg-black rotate-45 pointer-events-none" />
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 border-2 border-on-surface rounded-none shrink-0",
+                streak > 0 ? "bg-black text-[#facc15]" : "bg-surface text-on-surface-variant border-on-surface-variant/30"
+              )}>
+                <Zap className={cn("w-6 h-6", streak > 0 ? "animate-pulse fill-current" : "")} />
+              </div>
+              <div className="text-left">
+                <p className="text-[8px] font-mono font-black uppercase tracking-widest leading-none mb-1">// STREAK_CONDUIT</p>
+                <p className="text-2xl font-black uppercase italic tracking-tight font-sans leading-none mb-1">
+                  {streak} {streak === 1 ? 'DAY' : 'DAYS'}
+                </p>
+                <p className="text-[8px] font-bold uppercase italic tracking-wide leading-tight">
+                  {streak > 0 ? 'SYSTEM OVERDRIVE ACTIVE ⚡' : 'LOG CONSECUTIVE MISSIONS'}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-10">
             <h3 className="text-[10px] font-bold uppercase italic tracking-widest text-on-surface/60 mb-1">
               {format(selectedDate, 'EEEE')}

@@ -3,13 +3,14 @@ import { Outlet, NavLink, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { logOut, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { Home, User, Users, Calendar, LogOut, Briefcase, Bell, MessageSquare, CheckSquare, Trophy, Target, Sparkles, Search, Activity, Zap } from 'lucide-react';
+import { Home, User, Users, Calendar, LogOut, Briefcase, Bell, MessageSquare, CheckSquare, Trophy, Target, Sparkles, Search, Activity, Zap, Monitor, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { OnboardingTour } from './OnboardingTour';
 import { ThemeToggle } from './ThemeToggle';
 import { CommandPalette } from './CommandPalette';
 import { toast } from 'react-hot-toast';
+import { playSound } from '../lib/sounds';
 
 export function Layout() {
   const { user } = useAuth();
@@ -21,6 +22,40 @@ export function Layout() {
   const [userLevel, setUserLevel] = useState(1);
   const [userPoints, setUserPoints] = useState(150);
   const { userProfile } = useAuth();
+
+  const [crtActive, setCrtActive] = useState(() => {
+    return localStorage.getItem('crt_mode_enabled') !== 'false';
+  });
+  const [soundActive, setSoundActive] = useState(() => {
+    return localStorage.getItem('sound_fx_enabled') !== 'false';
+  });
+
+  const toggleSound = () => {
+    const nextVal = !soundActive;
+    setSoundActive(nextVal);
+    localStorage.setItem('sound_fx_enabled', nextVal ? 'true' : 'false');
+    if (nextVal) {
+      playSound('success');
+      toast.success('SYS_CYBER_SOUND_FX: DEPLOYED');
+    } else {
+      toast.success('SYS_CYBER_SOUND_FX: SILENCED');
+    }
+  };
+
+  const toggleCrt = () => {
+    const nextVal = !crtActive;
+    setCrtActive(nextVal);
+    window.dispatchEvent(new CustomEvent('TOGGLE_CRT_MONITOR'));
+    if (soundActive) {
+      playSound('click');
+    }
+    toast.success(nextVal ? 'CRT_GLASS_DEPOLARIZER: ACTIVE' : 'CRT_GLASS_DEPOLARIZER: DEACTIVATED');
+  };
+
+  useEffect(() => {
+    // Play warm synthetic boot chime
+    playSound('startup');
+  }, []);
 
   useEffect(() => {
     if (userProfile?.pendingConnections) {
@@ -168,6 +203,7 @@ export function Layout() {
               <NavLink
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => playSound('hover')}
                 className={({ isActive }) => cn(
                   "h-full flex items-center px-4 font-bold uppercase tracking-tight transition-all relative group",
                   isActive ? "text-on-surface" : "text-on-surface-variant hover:text-on-surface"
@@ -208,6 +244,42 @@ export function Layout() {
             <span>NODE: {user?.uid.slice(0, 8)}</span>
           </div>
           <ThemeToggle />
+
+          {/* Sensory Control Suite */}
+          <button
+            type="button"
+            onClick={toggleCrt}
+            className={cn(
+              "relative group p-2 border-2 border-on-surface shadow-brutal transition-all hover:shadow-brutal-lg active:scale-92 cursor-pointer",
+              crtActive ? "bg-primary" : "bg-surface-container-low"
+            )}
+            title="Toggle Vintage CRT Hardware Lens"
+          >
+            <Monitor className="w-5 h-5 text-on-surface" />
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none">
+              <div className="absolute inset-x-0 top-0 h-[1px] bg-white animate-[glitch-anim_0.2s_infinite]" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={cn(
+              "relative group p-2 border-2 border-on-surface shadow-brutal transition-all hover:shadow-brutal-lg active:scale-92 cursor-pointer",
+              soundActive ? "bg-secondary" : "bg-surface-container-low"
+            )}
+            title="Toggle Cybernetic soundscape audio"
+          >
+            {soundActive ? (
+              <Volume2 className="w-5 h-5 text-on-surface animate-pulse" />
+            ) : (
+              <VolumeX className="w-5 h-5 text-on-surface-variant" />
+            )}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none">
+              <div className="absolute inset-x-0 bottom-0 h-[1px] bg-secondary animate-[glitch-anim_0.2s_infinite_reverse]" />
+            </div>
+          </button>
+
           <button
             onClick={handleLogout}
             className="liquid-btn text-xs px-4 py-2"
@@ -243,6 +315,7 @@ export function Layout() {
                   <NavLink
                     key={item.path}
                     to={item.path}
+                    onMouseEnter={() => playSound('hover')}
                     className={({ isActive }) =>
                       cn(
                         "flex items-center justify-between px-4 py-3 border-2 border-transparent font-bold text-xs uppercase italic tracking-tight transition-all",
@@ -275,6 +348,7 @@ export function Layout() {
                   <NavLink
                     key={item.path}
                     to={item.path}
+                    onMouseEnter={() => playSound('hover')}
                     className={({ isActive }) =>
                       cn(
                         "flex items-center justify-between px-4 py-3 border-2 border-transparent font-bold text-xs uppercase italic tracking-tight transition-all",

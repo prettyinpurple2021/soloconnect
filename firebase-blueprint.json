@@ -40,7 +40,7 @@
     },
     "Document": {
       "title": "Document",
-      "description": "A document or ideation note created by SoloScribe",
+      "description": "A document or ideation note created by SoloConnect",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
@@ -366,7 +366,7 @@
     },
     "documents/{docId}": {
       "schema": { "$ref": "#/entities/Document" },
-      "description": "SoloScribe documents"
+      "description": "SoloConnect documents"
     },
     "activities/{activityId}": {
       "schema": { "$ref": "#/entities/Activity" },

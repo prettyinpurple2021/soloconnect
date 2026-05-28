@@ -7,6 +7,7 @@ import { UserCheck, UserPlus, UserX, X, Check, Users } from 'lucide-react';
 import { acceptConnectionRequest, rejectConnectionRequest, removeConnection } from '../lib/connections';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { PersonaBadge } from '../components/PersonaBadge';
 
 interface UserProfilePreview {
   uid: string;
@@ -119,9 +120,9 @@ export function Connections() {
                   <Link to={`/profile/${p.uid}`} className="block text-xl font-headline font-black uppercase italic tracking-tight text-on-surface hover:text-primary transition-colors truncate">
                     {p.displayName}
                   </Link>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                    {p.founderType || 'FOUNDER'}
-                  </p>
+                  <div className="mt-2 flex justify-center sm:justify-start">
+                    <PersonaBadge personaString={p.founderType} size="sm" />
+                  </div>
                 </div>
                 <div className="flex sm:flex-col gap-3 shrink-0">
                   <button onClick={() => handleAccept(p.uid)} className="bg-primary text-on-surface border-2 border-on-surface p-2 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all" title="Accept">
@@ -159,9 +160,9 @@ export function Connections() {
                   <Link to={`/profile/${p.uid}`} className="block text-xl font-headline font-black uppercase italic tracking-tight text-on-surface hover:text-primary transition-colors truncate">
                     {p.displayName}
                   </Link>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                    {p.founderType || 'FOUNDER'}
-                  </p>
+                  <div className="mt-2 flex justify-center">
+                    <PersonaBadge personaString={p.founderType} size="sm" />
+                  </div>
                 </div>
                 <div className="flex gap-4 w-full">
                   <Link to={`/messages?chat=${p.uid}`} className="flex-1 bg-secondary text-on-surface border-2 border-on-surface py-2 shadow-brutal hover:bg-primary transition-colors text-[10px] font-bold uppercase italic flex justify-center items-center">

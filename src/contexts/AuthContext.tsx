@@ -22,6 +22,13 @@ export interface UserProfileData {
   endorsements?: { [skill: string]: string[] };
   onboardingDismissed?: boolean;
   isVerified?: boolean;
+  founderType?: string;
+  level?: number;
+  availabilityStatus?: string;
+  favoriteDrink?: string;
+  hardwareRig?: string;
+  codingMusic?: string;
+  amaOpened?: boolean;
   createdAt: any;
   updatedAt: any;
 }

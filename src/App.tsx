@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Toaster } from 'react-hot-toast';
 import { SoloAssistant } from './components/SoloAssistant';
+import { CyberGlowManager } from './components/CyberGlowManager';
 
 // Lazy load pages for production performance
 import { Feed } from './pages/Feed';
@@ -91,6 +92,7 @@ export default function App() {
         <BrowserRouter>
           <Toaster position="top-center" />
           <SoloAssistant />
+          <CyberGlowManager />
           <AppContent />
         </BrowserRouter>
       </AuthProvider>
