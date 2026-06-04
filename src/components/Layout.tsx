@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { OnboardingTour } from './OnboardingTour';
 import { ThemeToggle } from './ThemeToggle';
 import { CommandPalette } from './CommandPalette';
+import { FloatingActions } from './FloatingActions';
 import { toast } from 'react-hot-toast';
 import { playSound } from '../lib/sounds';
 
@@ -24,7 +25,7 @@ export function Layout() {
   const { userProfile } = useAuth();
 
   const [crtActive, setCrtActive] = useState(() => {
-    return localStorage.getItem('crt_mode_enabled') !== 'false';
+    return localStorage.getItem('crt_mode_enabled') === 'true';
   });
   const [soundActive, setSoundActive] = useState(() => {
     return localStorage.getItem('sound_fx_enabled') !== 'false';
@@ -188,6 +189,7 @@ export function Layout() {
       <div className="noise-overlay" aria-hidden="true" />
       <CommandPalette />
       <OnboardingTour />
+      <FloatingActions />
       
       {/* Iridescent Background Container */}
       <div className="fixed inset-0 liquid-iridescent-bg pointer-events-none z-0" />
@@ -256,9 +258,7 @@ export function Layout() {
             title="Toggle Vintage CRT Hardware Lens"
           >
             <Monitor className="w-5 h-5 text-on-surface" />
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none">
-              <div className="absolute inset-x-0 top-0 h-[1px] bg-white animate-[glitch-anim_0.2s_infinite]" />
-            </div>
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/10 pointer-events-none" />
           </button>
 
           <button
@@ -275,9 +275,7 @@ export function Layout() {
             ) : (
               <VolumeX className="w-5 h-5 text-on-surface-variant" />
             )}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none">
-              <div className="absolute inset-x-0 bottom-0 h-[1px] bg-secondary animate-[glitch-anim_0.2s_infinite_reverse]" />
-            </div>
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/10 pointer-events-none" />
           </button>
 
           <button

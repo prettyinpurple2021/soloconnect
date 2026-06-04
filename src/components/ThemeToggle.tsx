@@ -42,11 +42,8 @@ export function ThemeToggle() {
         </AnimatePresence>
       </div>
 
-      {/* Glitch Background Effect on Hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none">
-        <div className="absolute inset-x-0 top-0 h-[1px] bg-white animate-[glitch-anim_0.2s_infinite]" />
-        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-primary animate-[glitch-anim_0.3s_infinite_reverse]" />
-      </div>
+      {/* Glow Hover Layer */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/10 pointer-events-none" />
       
       {/* Liquid Melting Overlay */}
       <motion.div

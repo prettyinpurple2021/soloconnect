@@ -98,30 +98,11 @@ export function MomentumWave({ activities }: MomentumWaveProps) {
       .attr('stop-color', theme === 'dark' ? '#FF7ED2' : '#FFACE4')
       .attr('stop-opacity', 0);
 
-    // Filter mask for liquid shimmer
-    const filterId = `shimmer-${Math.random().toString(36).substr(2, 9)}`;
-    const filter = defs.append('filter').attr('id', filterId);
-    filter.append('feTurbulence')
-      .attr('type', 'fractalNoise')
-      .attr('baseFrequency', '0.01 0.05')
-      .attr('numOctaves', '2')
-      .attr('result', 'noise')
-      .append('animate')
-      .attr('attributeName', 'baseFrequency')
-      .attr('values', '0.01 0.05; 0.02 0.08; 0.01 0.05')
-      .attr('dur', '10s')
-      .attr('repeatCount', 'indefinite');
-    filter.append('feDisplacementMap')
-      .attr('in', 'SourceGraphic')
-      .attr('in2', 'noise')
-      .attr('scale', '10');
-
     // Drawing Area
     svg.append('path')
       .datum(data)
       .attr('fill', `url(#${gradientId})`)
-      .attr('d', area)
-      .attr('filter', `url(#${filterId})`);
+      .attr('d', area);
 
     // Drawing Line
     svg.append('path')
@@ -129,8 +110,7 @@ export function MomentumWave({ activities }: MomentumWaveProps) {
       .attr('fill', 'none')
       .attr('stroke', theme === 'dark' ? '#FF7ED2' : '#FFACE4')
       .attr('stroke-width', 3)
-      .attr('d', line)
-      .attr('filter', `url(#${filterId})`);
+      .attr('d', line);
 
     // Glowing endpoint
     const lastPoint = data[data.length - 1];

@@ -14,7 +14,7 @@ interface Particle {
 
 export function CyberGlowManager() {
   const [crtEnabled, setCrtEnabled] = useState(() => {
-    return localStorage.getItem('crt_mode_enabled') !== 'false';
+    return localStorage.getItem('crt_mode_enabled') === 'true';
   });
 
   const [particles, setParticles] = useState<Particle[]>([]);

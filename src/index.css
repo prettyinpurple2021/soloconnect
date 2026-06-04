@@ -111,12 +111,12 @@
   &::before {
     color: var(--color-primary);
     z-index: -1;
-    animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+    transform: translate(-2px, 1px);
   }
   &::after {
     color: var(--color-secondary);
     z-index: -2;
-    animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) reverse both infinite;
+    transform: translate(1px, -1px);
   }
 }
 
@@ -125,45 +125,37 @@
 }
 
 @utility noise-overlay {
-  position: fixed;
-  top: -50%;
-  left: -50%;
-  right: -50%;
-  bottom: -50%;
-  width: 200%;
-  height: 200%;
-  background: transparent url('http://assets.iceable.com/img/noise-transparent.png') repeat;
-  background-size: 150px 150px;
-  animation: noise 0.5s steps(5) infinite;
-  opacity: 0.05;
-  pointer-events: none;
-  z-index: 9999;
+  display: none !important;
 }
 
 @utility liquid-iridescent-bg {
+  /* Gorgeous Static Y2K Iridescent Nebula Mesh */
   background: 
-    /* Iridescent Sheen Layer */
-    linear-gradient(115deg, rgba(255,255,255,0.4) 0%, transparent 15%, rgba(255,255,255,0.2) 30%, transparent 45%, rgba(255,255,255,0.3) 60%, transparent 75%, rgba(255,255,255,0.2) 90%),
-    /* Vibrant Iridescent Nodes */
-    radial-gradient(at 0% 0%, rgba(255, 126, 210, 0.4) 0, transparent 60%), 
-    radial-gradient(at 50% 0%, rgba(34, 211, 238, 0.4) 0, transparent 60%), 
-    radial-gradient(at 100% 0%, rgba(129, 140, 248, 0.4) 0, transparent 60%), 
-    radial-gradient(at 0% 50%, rgba(34, 211, 238, 0.3) 0, transparent 60%), 
-    radial-gradient(at 50% 50%, rgba(255, 126, 210, 0.3) 0, transparent 60%), 
-    radial-gradient(at 100% 50%, rgba(129, 140, 248, 0.3) 0, transparent 60%), 
-    radial-gradient(at 0% 100%, rgba(129, 140, 248, 0.4) 0, transparent 60%), 
-    radial-gradient(at 50% 100%, rgba(34, 211, 238, 0.4) 0, transparent 60%), 
-    radial-gradient(at 100% 100%, rgba(255, 126, 210, 0.4) 0, transparent 60%),
-    /* Liquid Chrome Base */
-    var(--liquid-base, linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 20%, #94a3b8 40%, #64748b 50%, #94a3b8 60%, #cbd5e1 80%, #e2e8f0 100%));
+    radial-gradient(at 10% 15%, rgba(255, 172, 228, 0.35) 0px, transparent 45%),
+    radial-gradient(at 85% 15%, rgba(165, 243, 252, 0.4) 0px, transparent 45%),
+    radial-gradient(at 50% 85%, rgba(196, 181, 253, 0.35) 0px, transparent 55%),
+    radial-gradient(at 15% 85%, rgba(165, 243, 252, 0.25) 0px, transparent 45%),
+    radial-gradient(at 90% 80%, rgba(255, 172, 228, 0.25) 0px, transparent 45%),
+    #EDF2F7; /* Solid stable light slate base */
+
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   
   .dark & {
-    --liquid-base: linear-gradient(135deg, #020617 0%, #0f172a 20%, #1e293b 40%, #334155 50%, #1e293b 60%, #0f172a 80%, #020617 100%);
+    /* Immersive Ultra-Vibrant Cyber Dark Backdrop */
+    background: 
+      radial-gradient(at 8% 12%, rgba(255, 126, 210, 0.2) 0px, transparent 45%),
+      radial-gradient(at 92% 18%, rgba(34, 211, 238, 0.22) 0px, transparent 50%),
+      radial-gradient(at 50% 80%, rgba(129, 140, 248, 0.18) 0px, transparent 55%),
+      radial-gradient(at 15% 85%, rgba(34, 211, 238, 0.15) 0px, transparent 45%),
+      radial-gradient(at 88% 82%, rgba(255, 126, 210, 0.15) 0px, transparent 45%),
+      #030712; /* Solid stable slate dark base */
+      
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
   }
-
-  background-size: 200% 200%;
-  animation: liquid-anim 15s ease-in-out infinite;
-  background-attachment: fixed;
 }
 
 @layer base {
@@ -237,40 +229,15 @@
 
 /* --- VINTAGE Y2K CRT & NEON HARDWARE OVERLAYS --- */
 .crt-active {
-  animation: crt-flicker 0.15s infinite;
   text-shadow: 0 0 2px rgba(255,172,228,0.4), 0 0 5px rgba(165,243,252,0.3);
 }
 
 .crt-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-  background-size: 100% 4px, 6px 100%;
-  z-index: 99999;
-  pointer-events: none;
-  opacity: 0.15;
-}
-
-.dark .crt-overlay {
-  opacity: 0.22;
+  display: none !important;
 }
 
 .crt-vignette {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle, transparent 65%, rgba(0,0,0,0.4) 100%);
-  z-index: 99998;
-  pointer-events: none;
-  mix-blend-mode: multiply;
-}
-
-@keyframes crt-flicker {
-  0% { opacity: 0.992; }
-  50% { opacity: 1; }
-  100% { opacity: 0.995; }
+  display: none !important;
 }
 
 /* Y2K Blast Particle Drift */
@@ -295,4 +262,20 @@
   text-shadow: 2px 2px 0px #000;
   will-change: transform, opacity;
 }
+
+/* Subtle CSS glitch animation on user avatars when hovered */
+img[src*="ui-avatars.com"]:hover,
+img[src*="picsum.photos"]:hover,
+img[src*="googleusercontent.com"]:hover,
+img[src*="avatar"]:hover,
+.avatar-glitch:hover,
+a:hover img[src*="ui-avatars.com"],
+a:hover img[src*="picsum.photos"],
+a:hover img[src*="avatar"],
+a:hover img[src*="googleusercontent.com"],
+.group:hover img[src*="ui-avatars.com"],
+.group:hover img[src*="avatar"] {
+  animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+}
+
 

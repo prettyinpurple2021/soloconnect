@@ -7,6 +7,7 @@ import { Login } from './pages/Login';
 import { Toaster } from 'react-hot-toast';
 import { SoloAssistant } from './components/SoloAssistant';
 import { CyberGlowManager } from './components/CyberGlowManager';
+import { useSoundFX } from './hooks/useSoundFX';
 
 // Lazy load pages for production performance
 import { Feed } from './pages/Feed';
@@ -49,6 +50,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function AppContent() {
   const { user, isAuthReady } = useAuth();
+  useSoundFX();
 
   return (
     <Suspense fallback={<LoadingScreen />}>

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, FileText, Cpu, GraduationCap, Factory, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { FloatingActions } from '../components/FloatingActions';
 
 const SOLOCONNECT_FEATURES = [
   { id: 'network', name: 'SOCIAL NETWORK', icon: Users, color: 'text-on-surface', bg: 'bg-primary', description: 'Connect with solo founders worldwide.' },
@@ -43,6 +44,8 @@ export function Login() {
 
   return (
     <div className="min-h-screen font-sans selection:bg-primary selection:text-on-surface overflow-x-hidden relative">
+      <FloatingActions />
+      
       {/* Iridescent Background Container */}
       <div className="fixed inset-0 liquid-iridescent-bg pointer-events-none z-0" />
       

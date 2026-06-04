@@ -198,11 +198,8 @@ export function Notifications() {
                   )}
                   onClick={() => !notification.read && markAsRead(notification.id)}
                 >
-                  {/* Liquid Shimmer Background */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity animate-[liquid-anim_5s_linear_infinite]" />
-                  
-                  {/* Glitch Line */}
-                  <div className="absolute inset-x-0 h-[1px] bg-white opacity-0 group-hover:opacity-30 top-1/4 animate-[glitch-anim_0.1s_infinite]" />
+                  {/* Clean Accent Group Background on Hover */}
+                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   
                   {!notification.read && (
                     <div className="absolute left-[-4px] top-[-4px] bottom-[-4px] w-3 bg-secondary border-r-4 border-on-surface z-10" />
