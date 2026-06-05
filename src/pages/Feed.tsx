@@ -18,6 +18,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { RichTextEditor } from '../components/RichTextEditor';
 import { OnboardingChecklist } from '../components/OnboardingChecklist';
 import { BentoDashboard } from '../components/BentoDashboard';
+import { OnlineIndicator } from '../components/OnlineIndicator';
 import { generatePostContent, generateImage, analyzePulse } from '../services/geminiService';
 import { addXP } from '../lib/reputation';
 import { PersonaBadge, PersonaIcon } from '../components/PersonaBadge';
@@ -947,13 +948,16 @@ export function Feed() {
               <div className="absolute top-0 left-0 w-full h-1 liquid-gradient opacity-30" />
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                  <Link to={`/feed/profile/${post.authorId}`} className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden shrink-0 block hover:scale-105 transition-transform">
-                    <img 
-                      src={post.authorPhoto || `https://ui-avatars.com/api/?name=${post.authorName}`} 
-                      alt={post.authorName} 
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
-                    />
-                  </Link>
+                  <div className="relative shrink-0">
+                    <Link to={`/feed/profile/${post.authorId}`} className="w-16 h-16 border-2 border-on-surface shadow-brutal overflow-hidden block hover:scale-105 transition-transform">
+                      <img 
+                        src={post.authorPhoto || `https://ui-avatars.com/api/?name=${post.authorName}`} 
+                        alt={post.authorName} 
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all"
+                      />
+                    </Link>
+                    <OnlineIndicator userId={post.authorId} className="bottom-0 right-0 border-2 border-on-surface shadow-xs" size="sm" />
+                  </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
                       <Link to={`/feed/profile/${post.authorId}`} className="text-xl font-headline font-black text-on-surface uppercase italic tracking-tight hover:text-primary transition-colors leading-tight">

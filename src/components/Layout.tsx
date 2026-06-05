@@ -23,6 +23,9 @@ export function Layout() {
   const [userLevel, setUserLevel] = useState(1);
   const [userPoints, setUserPoints] = useState(150);
   const { userProfile } = useAuth();
+  const [isGlitchModalOpen, setIsGlitchModalOpen] = useState(false);
+  const [glitchText, setGlitchText] = useState('');
+  const [isSubmittingGlitch, setIsSubmittingGlitch] = useState(false);
 
   const [crtActive, setCrtActive] = useState(() => {
     return localStorage.getItem('crt_mode_enabled') === 'true';
@@ -380,21 +383,10 @@ export function Layout() {
             </div>
             <button 
               onClick={() => {
-                const feedback = prompt("TRANSMIT_FEEDBACK_TO_THE_VOID:");
-                if (feedback) {
-                  import('../lib/firebase').then(({ db }) => {
-                    import('firebase/firestore').then(({ collection, addDoc, serverTimestamp }) => {
-                      addDoc(collection(db, 'feedback'), {
-                        userId: user?.uid,
-                        userEmail: user?.email,
-                        content: feedback,
-                        createdAt: serverTimestamp()
-                      }).then(() => alert("FEEDBACK_RECEIVED_FOUNDER."));
-                    });
-                  });
-                }
+                playSound('click');
+                setIsGlitchModalOpen(true);
               }}
-              className="w-full py-2 bg-surface-container-low text-on-surface font-black uppercase text-[10px] italic border-2 border-on-surface shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all"
+              className="w-full py-2 bg-surface-container-low text-on-surface font-black uppercase text-[10px] italic border-2 border-on-surface shadow-brutal hover:shadow-brutal-lg hover:-translate-y-0.5 transition-all cursor-pointer"
             >
               REPORT_GLITCH
             </button>
@@ -408,6 +400,108 @@ export function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Glitch / Feedback Overlay Modal */}
+      <AnimatePresence>
+        {isGlitchModalOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                playSound('click');
+                setIsGlitchModalOpen(false);
+              }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[150] cursor-pointer"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed top-1/4 left-1/2 -translate-x-1/2 w-full max-w-md bg-surface border-4 border-on-surface shadow-[6px_6px_0px_0px_var(--color-primary)] z-[151] p-0 rounded-none overflow-hidden"
+              style={{ x: '-50%' }}
+            >
+              {/* Title Header */}
+              <div className="bg-primary text-[#030712] p-2.5 font-mono text-[10px] font-black border-b-4 border-on-surface flex items-center justify-between select-none">
+                <span className="tracking-widest uppercase">SOLOCONNECT://REPORT_GLITCH.EXE</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound('click');
+                    setIsGlitchModalOpen(false);
+                  }}
+                  className="w-5 h-5 bg-secondary text-black border-2 border-on-surface flex items-center justify-center font-black text-[10px] hover:bg-accent hover:shadow-none cursor-pointer"
+                >
+                  X
+                </button>
+              </div>
+
+              {/* Form Body */}
+              <form 
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!glitchText.trim()) return;
+
+                  setIsSubmittingGlitch(true);
+                  try {
+                    const { db } = await import('../lib/firebase');
+                    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+                    await addDoc(collection(db, 'feedback'), {
+                      userId: user?.uid,
+                      userEmail: user?.email,
+                      content: glitchText.trim(),
+                      createdAt: serverTimestamp()
+                    });
+                    playSound('success');
+                    toast.success('SYS_PULSE: BUG_TRANSMITTED_TO_THE_VOID');
+                    setIsGlitchModalOpen(false);
+                    setGlitchText('');
+                  } catch (err: any) {
+                    playSound('alert');
+                    toast.error('TRANSMISSION_ERROR: ' + (err.message || 'STATIC_INTERFERENCE'));
+                  } finally {
+                    setIsSubmittingGlitch(false);
+                  }
+                }}
+                className="p-5 flex flex-col gap-4"
+              >
+                <p className="font-headline font-black text-xs uppercase italic tracking-wider text-on-surface-variant">
+                  // TRANSMIT_DEEP_SPACE_LOG:
+                </p>
+                <textarea
+                  required
+                  value={glitchText}
+                  onChange={(e) => setGlitchText(e.target.value)}
+                  placeholder="EXPLAIN THE INTERFERENCE OR GLITCH..."
+                  className="w-full h-32 bg-surface-container-lowest border-2 border-on-surface p-3 font-mono text-[11px] uppercase italic outline-none focus:border-secondary shadow-brutal select-text selection:bg-secondary resize-none"
+                  rows={4}
+                  autoFocus
+                />
+                <div className="flex items-center gap-3 justify-end mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound('click');
+                      setIsGlitchModalOpen(false);
+                    }}
+                    className="px-4 py-2 bg-surface-container border-2 border-on-surface font-black uppercase text-[10px] hover:bg-surface-container-high transition-all cursor-pointer"
+                  >
+                    [ABORT]
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingGlitch}
+                    className="px-5 py-2 bg-primary text-black border-2 border-on-surface font-black uppercase text-[10px] shadow-brutal hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isSubmittingGlitch ? 'TRANSMITTING...' : '[TRANSMIT]'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

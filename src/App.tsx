@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PresenceProvider } from './contexts/PresenceContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -91,12 +92,14 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <BrowserRouter>
-          <Toaster position="top-center" />
-          <SoloAssistant />
-          <CyberGlowManager />
-          <AppContent />
-        </BrowserRouter>
+        <PresenceProvider>
+          <BrowserRouter>
+            <Toaster position="top-center" />
+            <SoloAssistant />
+            <CyberGlowManager />
+            <AppContent />
+          </BrowserRouter>
+        </PresenceProvider>
       </AuthProvider>
     </ErrorBoundary>
   );

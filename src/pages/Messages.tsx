@@ -7,6 +7,8 @@ import { Send, Search, User, MoreVertical, Phone, Video, Smile, Paperclip } from
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { OnlineIndicator } from '../components/OnlineIndicator';
+import { useUserOnlineState } from '../hooks/useUserOnlineState';
 
 interface Chat {
   id: string;
@@ -47,6 +49,14 @@ export function Messages() {
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const getOtherParticipantId = (chat: Chat | null) => {
+    if (!chat || !user) return undefined;
+    return chat.participants.find(id => id !== user.uid);
+  };
+
+  const otherParticipantId = selectedChat ? getOtherParticipantId(selectedChat) : undefined;
+  const isOtherUserOnline = useUserOnlineState(otherParticipantId);
 
   // React Quick Reactions State
   const [activeReactionPickerMessageId, setActiveReactionPickerMessageId] = useState<string | null>(null);
@@ -371,7 +381,7 @@ export function Messages() {
                         referrerPolicy="no-referrer"
                       />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-2 border-on-surface shadow-brutal"></div>
+                    <OnlineIndicator userId={otherUser?.uid} className="-bottom-1 -right-1" size="sm" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
@@ -417,13 +427,15 @@ export function Messages() {
                       referrerPolicy="no-referrer"
                     />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-accent border-2 border-on-surface shadow-brutal"></div>
+                  <OnlineIndicator userId={getOtherParticipant(selectedChat)?.uid} className="-bottom-1 -right-1" size="sm" />
                 </div>
                 <div>
                   <p className="text-3xl font-headline font-black uppercase italic tracking-tighter text-on-surface">{getOtherParticipant(selectedChat)?.displayName || 'LOADING...'}</p>
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                    <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.2em] italic">ACTIVE_PROTOCOL</p>
+                    <span className={cn("w-2 h-2 rounded-full animate-pulse", isOtherUserOnline ? "bg-[#10B981]" : "bg-outline")} />
+                    <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-[0.2em] italic">
+                      {isOtherUserOnline ? "NODE_STATUS://ONLINE" : "NODE_STATUS://OFFLINE"}
+                    </p>
                   </div>
                 </div>
               </div>
