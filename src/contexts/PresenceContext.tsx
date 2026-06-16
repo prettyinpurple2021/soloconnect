@@ -17,6 +17,43 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { user } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState<{ [uid: string]: boolean }>({});
   const subscriptionsRef = useRef<{ [uid: string]: { count: number; unsubscribe: () => void } }>({});
+  const lastActiveDatesRef = useRef<{ [uid: string]: Date | null }>({});
+
+  const sweep = React.useCallback(() => {
+    const now = Date.now();
+    setOnlineUsers(prev => {
+      let changed = false;
+      const next: { [uid: string]: boolean } = {};
+
+      Object.keys(lastActiveDatesRef.current).forEach(uid => {
+        const lastActiveDate = lastActiveDatesRef.current[uid];
+        const isOnline = lastActiveDate 
+          ? (now - lastActiveDate.getTime() <= 75000) 
+          : false;
+        
+        next[uid] = isOnline;
+        if (prev[uid] !== isOnline) {
+          changed = true;
+        }
+      });
+
+      if (!changed) {
+        const prevKeys = Object.keys(prev);
+        const nextKeys = Object.keys(next);
+        if (prevKeys.length !== nextKeys.length) {
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, []);
+
+  // Run a status sweep every 15 seconds to gracefully transition users offline
+  useEffect(() => {
+    const sweepInterval = setInterval(sweep, 15000);
+    return () => clearInterval(sweepInterval);
+  }, [sweep]);
 
   // 1. Current user heartbeat
   useEffect(() => {
@@ -73,19 +110,11 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           
           if (lastActive) {
             const lastActiveDate = lastActive.toDate ? lastActive.toDate() : new Date(lastActive);
-            const timeDiff = Date.now() - lastActiveDate.getTime();
-            // Consider user active/online if timestamp is within a generous 75 seconds window
-            const isOnline = timeDiff <= 75000;
-            setOnlineUsers(prev => {
-              if (prev[uid] === isOnline) return prev;
-              return { ...prev, [uid]: isOnline };
-            });
+            lastActiveDatesRef.current[uid] = lastActiveDate;
           } else {
-            setOnlineUsers(prev => {
-              if (prev[uid] === false) return prev;
-              return { ...prev, [uid]: false };
-            });
+            lastActiveDatesRef.current[uid] = null;
           }
+          sweep();
         }
       }, () => {
         // Silent capture for network disconnects or permissions
@@ -102,16 +131,12 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           // No more active observers on the DOM; teardown connection cleanly
           sub.unsubscribe();
           delete subscriptionsRef.current[uid];
-          setOnlineUsers(prev => {
-            if (!(uid in prev)) return prev;
-            const next = { ...prev };
-            delete next[uid];
-            return next;
-          });
+          delete lastActiveDatesRef.current[uid];
+          sweep();
         }
       }
     };
-  }, []);
+  }, [sweep]);
 
   return (
     <PresenceContext.Provider value={{ onlineUsers, subscribeToUserPresence }}>

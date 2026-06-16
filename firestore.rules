@@ -86,6 +86,17 @@ service cloud.firestore {
       allow delete: if isOwner(existing().authorId) || isAdmin();
     }
 
+    match /polls/{pollId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && incoming().creatorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['votes']) || 
+        isOwner(existing().creatorId) || 
+        isAdmin()
+      );
+      allow delete: if isOwner(existing().creatorId) || isAdmin();
+    }
+
     match /comments/{commentId} {
       allow read: if isSignedIn();
       allow create: if isVerified() && incoming().userId == request.auth.uid;
@@ -172,6 +183,20 @@ service cloud.firestore {
     match /mail/{mailId} {
       allow create: if isSignedIn();
       allow read: if isAdmin();
+    }
+
+    match /teardowns/{teardownId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && incoming().creatorId == request.auth.uid;
+      allow update: if (isOwner(existing().creatorId) && incoming().creatorId == existing().creatorId) || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['feedbackCount']));
+      allow delete: if isOwner(existing().creatorId) || isAdmin();
+    }
+
+    match /teardown_reviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && incoming().reviewerId == request.auth.uid;
+      allow update: if (isOwner(existing().reviewerId) && incoming().reviewerId == existing().reviewerId) || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['upvotes']));
+      allow delete: if isOwner(existing().reviewerId) || isAdmin();
     }
   }
 }

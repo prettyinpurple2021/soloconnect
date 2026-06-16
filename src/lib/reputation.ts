@@ -9,6 +9,8 @@ export const XP_VALUES = {
   vouch_user: 100,
   complete_mission: 250,
   check_in: 40,
+  create_poll: 40,
+  vote_poll: 10,
 };
 
 export const calculateLevel = (xp: number = 0) => {

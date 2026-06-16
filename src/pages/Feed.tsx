@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { toggleUserConnection } from '../lib/connections';
 import { cn } from '../lib/utils';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'react-hot-toast';
 import { logActivity } from '../lib/activities';
 import { PostComments } from '../components/PostComments';
@@ -19,6 +19,8 @@ import { RichTextEditor } from '../components/RichTextEditor';
 import { OnboardingChecklist } from '../components/OnboardingChecklist';
 import { BentoDashboard } from '../components/BentoDashboard';
 import { OnlineIndicator } from '../components/OnlineIndicator';
+import { Polls } from '../components/Polls';
+import { TearDowns } from '../components/TearDowns';
 import { generatePostContent, generateImage, analyzePulse } from '../services/geminiService';
 import { addXP } from '../lib/reputation';
 import { PersonaBadge, PersonaIcon } from '../components/PersonaBadge';
@@ -72,6 +74,15 @@ export function Feed() {
   const [editContent, setEditContent] = useState('');
   const [filterTag, setFilterTag] = useState<string>('All');
   const [filterPersona, setFilterPersona] = useState<string>('All');
+  const [streamTab, setStreamTab] = useState<'posts' | 'polls' | 'teardowns'>('posts');
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'teardowns') {
+      setStreamTab('teardowns');
+    }
+  }, [searchParams]);
   const [sortBy, setSortBy] = useState<'recent' | 'liked' | 'commented'>('recent');
   const [pulseInsight, setPulseInsight] = useState<string>('Analyzing community momentum...');
   const [displayLimit, setDisplayLimit] = useState(10);
@@ -218,8 +229,23 @@ export function Feed() {
 
   useEffect(() => {
     const fetchPulse = async () => {
-      const insight = await analyzePulse(stats);
-      setPulseInsight(insight);
+      // Avoid rapid rate-limiting by caching the dynamic pulse insight in sessionStorage per session
+      const cacheKey = 'founder_pulse_insight';
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        setPulseInsight(cached);
+        return;
+      }
+
+      try {
+        const insight = await analyzePulse(stats);
+        if (insight) {
+          setPulseInsight(insight);
+          sessionStorage.setItem(cacheKey, insight);
+        }
+      } catch (err) {
+        console.error("Failed to fetch fresh pulse:", err);
+      }
     };
     if (stats.activeNodes > 0) {
       fetchPulse();
@@ -857,8 +883,49 @@ export function Feed() {
         </form>
       </div>
 
-      {/* Filters & Sorting */}
-      <div className="space-y-6">
+      {/* Stream Tab Switcher */}
+      <div className="flex border-b-4 border-on-surface mb-8">
+        <button 
+          onClick={() => setStreamTab('posts')}
+          className={cn(
+            "flex-1 md:flex-none px-8 py-4 font-headline font-black uppercase italic text-xs md:text-sm tracking-widest border-t-2 border-r-2 border-l-2 border-transparent transition-all cursor-pointer",
+            streamTab === 'posts' ? "bg-on-surface text-surface border-on-surface font-black" : "bg-surface-container-low text-on-surface hover:bg-on-surface/5"
+          )}
+        >
+          POSTS_FLOW
+        </button>
+        <button 
+          onClick={() => setStreamTab('polls')}
+          className={cn(
+            "flex-1 md:flex-none px-8 py-4 font-headline font-black uppercase italic text-xs md:text-sm tracking-widest border-t-2 border-r-2 border-l-2 border-transparent transition-all relative cursor-pointer",
+            streamTab === 'polls' ? "bg-on-surface text-surface border-on-surface font-black" : "bg-surface-container-low text-on-surface hover:bg-on-surface/5"
+          )}
+        >
+          COMMUNITY_POLLS
+          <span className="absolute -top-1 -right-1 bg-accent text-on-surface text-[7px] font-black tracking-widest px-1.5 py-0.5 border border-on-surface shadow-brutal-sm scale-90 md:scale-100">
+            VOTE_LIVE
+          </span>
+        </button>
+        <button 
+          onClick={() => setStreamTab('teardowns')}
+          className={cn(
+            "flex-1 md:flex-none px-8 py-4 font-headline font-black uppercase italic text-xs md:text-sm tracking-widest border-t-2 border-r-2 border-l-2 border-transparent transition-all relative cursor-pointer",
+            streamTab === 'teardowns' ? "bg-on-surface text-surface border-on-surface font-black" : "bg-surface-container-low text-on-surface hover:bg-on-surface/5"
+          )}
+        >
+          SANDBOX_TEARDOWNS
+          <span className="absolute -top-1 -right-1 bg-primary text-black text-[7px] font-black tracking-widest px-1.5 py-0.5 border border-on-surface shadow-brutal-sm scale-90 md:scale-100">
+            RAW_TRUTHS
+          </span>
+        </button>
+      </div>
+
+      {streamTab === 'polls' && <Polls />}
+      {streamTab === 'teardowns' && <TearDowns />}
+
+      <div className={cn("space-y-12 w-full", streamTab !== 'posts' && "hidden")}>
+        {/* Filters & Sorting */}
+        <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-[10px] font-bold uppercase italic tracking-widest text-on-surface-variant">// FILTER_STREAM</p>
           <div className="flex items-center gap-4">
@@ -1238,6 +1305,7 @@ export function Feed() {
             </div>
           </div>
         )}
+      </div>
         </div>
       </div>
 

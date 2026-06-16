@@ -306,6 +306,57 @@
         }
       },
       "required": ["to", "message"]
+    },
+    "Poll": {
+      "title": "Poll",
+      "description": "A quick survey / vote poll on SoloConnect",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "votes": { "type": "object", "description": "Map of optionIndex to list of userIds" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "creatorPhoto": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "options", "votes", "creatorId", "creatorName", "createdAt"]
+    },
+    "Teardown": {
+      "title": "Teardown",
+      "description": "A request for brutal, constructive feedback on landing pages, designs, or pitches",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "url": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "creatorPhoto": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "feedbackCount": { "type": "number" }
+      },
+      "required": ["title", "description", "creatorId", "creatorName", "createdAt", "feedbackCount"]
+    },
+    "TeardownReview": {
+      "title": "TeardownReview",
+      "description": "A structured, brutal/honest review of a founder's project teardown request",
+      "type": "object",
+      "properties": {
+        "teardownId": { "type": "string" },
+        "reviewerId": { "type": "string" },
+        "reviewerName": { "type": "string" },
+        "reviewerPhoto": { "type": "string" },
+        "ratingDesign": { "type": "number" },
+        "ratingValue": { "type": "number" },
+        "brutalTruth": { "type": "string" },
+        "actionableSteps": { "type": "string" },
+        "upvotes": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teardownId", "reviewerId", "reviewerName", "ratingDesign", "ratingValue", "brutalTruth", "actionableSteps", "upvotes", "createdAt"]
     }
   },
   "firestore": {
@@ -384,6 +435,18 @@
     "mail/{mailId}": {
       "schema": { "$ref": "#/entities/Mail" },
       "description": "Outbound email queue for Trigger Email extension"
+    },
+    "polls/{pollId}": {
+      "schema": { "$ref": "#/entities/Poll" },
+      "description": "Quick polls and surveys for the founder stream"
+    },
+    "teardowns/{teardownId}": {
+      "schema": { "$ref": "#/entities/Teardown" },
+      "description": "Brutal feedback requests on projects and pages"
+    },
+    "teardown_reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/TeardownReview" },
+      "description": "Structured critical reviews for user teardown requests"
     }
   }
 }

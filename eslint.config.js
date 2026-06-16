@@ -9,6 +9,9 @@ export default [
     plugins: {
       '@firebase/security-rules': firebaseRulesPlugin
     },
+    languageOptions: {
+      parser: firebaseRulesPlugin.parser,
+    },
     rules: {
       ...firebaseRulesPlugin.configs['flat/recommended'].rules
     }

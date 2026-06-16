@@ -14,7 +14,7 @@ import ReactMarkdown from 'react-markdown';
 interface Notification {
   id: string;
   userId: string;
-  type: 'connection_request' | 'comment' | 'event_invite';
+  type: 'connection_request' | 'comment' | 'event_invite' | 'teardown_feedback';
   sourceUserId: string;
   sourceUserName: string;
   sourceUserPhoto: string;
@@ -111,6 +111,8 @@ export function Notifications() {
         return <MessageSquare className="w-5 h-5 text-green-500" />;
       case 'event_invite':
         return <Calendar className="w-5 h-5 text-purple-500" />;
+      case 'teardown_feedback':
+        return <Sparkles className="w-5 h-5 text-orange-500" />;
       default:
         return <Bell className="w-5 h-5 text-zinc-500" />;
     }
@@ -240,7 +242,7 @@ export function Notifications() {
                         onClick={() => !notification.read && markAsRead(notification.id)}
                         className="inline-flex items-center justify-center px-6 py-2 text-xs font-black uppercase italic bg-accent border-2 border-on-surface text-on-accent shadow-kinetic-thud hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
                       >
-                        VIEW MISSION
+                        {notification.type === 'teardown_feedback' ? 'INSPECT TEARDOWN' : 'VIEW MISSION'}
                       </Link>
                       {!notification.read && (
                         <button 
